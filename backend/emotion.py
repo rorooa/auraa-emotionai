@@ -57,7 +57,7 @@ def normalize_emotion(emotion: str) -> str:
     return mapping.get(emotion.lower(), "neutral")
 
 # ---------------- CONFIDENCE FILTER ----------------
-def confidence_filter(emotion: str, confidence: float, threshold: float = 0.45) -> str:
+def confidence_filter(emotion: str, confidence: float, threshold: float = 0.30) -> str:
     if confidence < threshold:
         return "neutral"
     return emotion

@@ -59,11 +59,12 @@ class ChatRequest(BaseModel):
     name: str
     emotion: str
     messages: list[Message]
+    context: str | None = None
 
 @fastapi_app.post("/chat")
 def chat(payload: ChatRequest):
     # Returns Dict: { "reply": "...", "recommendation": { ... } }
-    response_data = generate_llm_reply(payload.name, payload.emotion, payload.messages)
+    response_data = generate_llm_reply(payload.name, payload.emotion, payload.messages, payload.context)
     return response_data
 
 # ---------------- SOCKET EVENTS ----------------
@@ -98,3 +99,6 @@ async def emotion(sid, data):
     except Exception as e:
         print(f"[ERROR] processing emotion: {e}")
 
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8000)

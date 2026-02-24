@@ -123,18 +123,18 @@ export default function ChatInterface({ onChat, isThinking, proactiveEmotion, on
     };
 
     return (
-        <div className="absolute inset-y-0 right-0 w-full md:w-1/2 flex flex-col items-center justify-center p-6 pointer-events-none">
+        <div className="absolute inset-y-0 right-0 w-full md:w-1/2 flex flex-col items-center justify-center p-6 pointer-events-none font-jura">
 
             {/* Chat History Section - "Other section for text" */}
-            <div className="w-full max-w-lg mb-8 space-y-4 max-h-[60vh] overflow-y-auto pointer-events-auto px-4 scrollbar-hide flex flex-col justify-end">
+            <div className="w-full max-w-lg mb-8 space-y-6 max-h-[60vh] overflow-y-auto pointer-events-auto px-4 scrollbar-hide flex flex-col justify-end">
                 {history.map((msg, i) => (
                     <div
                         key={i}
                         className={cn(
-                            "p-5 rounded-2xl shadow-xl backdrop-blur-md border border-white/20 text-lg font-medium animate-in slide-in-from-bottom-2 fade-in duration-300",
+                            "p-5 rounded-2xl shadow-xl backdrop-blur-md border border-white/10 text-[16px] leading-relaxed animate-in slide-in-from-bottom-2 fade-in duration-300",
                             msg.role === 'ai'
-                                ? "bg-indigo-600/95 text-white self-start rounded-tl-none mr-12"
-                                : "bg-white/95 text-indigo-900 self-end rounded-tr-none ml-12 text-right"
+                                ? "bg-slate-900/80 text-slate-100 self-start rounded-tl-none mr-12"
+                                : "bg-indigo-600/90 text-white self-end rounded-tr-none ml-12 text-right shadow-indigo-500/20"
                         )}
                     >
                         {msg.text}
@@ -143,12 +143,12 @@ export default function ChatInterface({ onChat, isThinking, proactiveEmotion, on
             </div>
 
             {/* Input Controls - Bright and Visible */}
-            <div className="pointer-events-auto flex flex-col items-center gap-4 bg-white/10 backdrop-blur-xl p-4 rounded-3xl border border-white/20 shadow-2xl w-full max-w-sm">
-                <div className="text-white font-bold tracking-wide text-lg">
+            <div className="pointer-events-auto flex flex-col items-center gap-4 bg-slate-900/60 backdrop-blur-3xl p-5 rounded-[2.5rem] border border-white/10 shadow-2xl w-full max-w-sm">
+                <div className="text-slate-400 text-[10px] font-bold tracking-[0.3em] uppercase mb-1">
                     {isListening ? "Listening..." : isThinking ? "Thinking..." : "Ready to Chat"}
                 </div>
 
-                <div className="flex w-full items-center gap-2">
+                <div className="flex w-full items-center gap-3">
                     <input
                         type="text"
                         value={inputValue}
@@ -157,36 +157,36 @@ export default function ChatInterface({ onChat, isThinking, proactiveEmotion, on
                         placeholder="Type a message..."
                         disabled={isThinking || isListening}
                         suppressHydrationWarning
-                        className="flex-1 bg-white/20 border border-white/30 text-white placeholder-white/50 rounded-full px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-400 transition-all"
+                        className="flex-1 bg-white/5 border border-white/10 text-slate-100 placeholder-slate-500 rounded-full px-5 py-3.5 outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all font-jura text-sm"
                     />
 
                     <button
                         onClick={handleSend}
                         disabled={isThinking || isListening || !inputValue.trim()}
-                        className="p-3 bg-indigo-600 hover:bg-indigo-500 rounded-full text-white transition-colors disabled:opacity-50"
+                        className="p-3.5 bg-indigo-600 hover:bg-indigo-500 rounded-full text-white transition-all disabled:opacity-30 shadow-lg shadow-indigo-500/20 active:scale-95"
                     >
-                        <Send size={20} />
+                        <Send size={18} />
                     </button>
 
                     <button
                         onClick={startListening}
                         disabled={isThinking || isListening}
                         className={cn(
-                            "p-3 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg border-2 text-white",
+                            "p-3.5 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg border border-white/10 text-white",
                             isListening
-                                ? "bg-rose-500 border-rose-300 animate-pulse"
-                                : "bg-gradient-to-tr from-indigo-500 to-purple-600 border-white/20 hover:scale-105"
+                                ? "bg-rose-500 border-rose-300 animate-pulse shadow-rose-500/40"
+                                : "bg-slate-800 hover:bg-slate-700 hover:scale-105"
                         )}
                     >
                         {isListening ? (
-                            <div className="h-5 w-5 bg-white rounded-sm animate-spin" />
+                            <div className="h-4 w-4 bg-white rounded-sm animate-spin" />
                         ) : (
-                            <Mic size={20} />
+                            <Mic size={18} />
                         )}
                     </button>
                 </div>
 
-                <p className="text-white/60 text-xs font-medium">Type or tap mic to speak</p>
+                <p className="text-slate-500 text-[9px] font-bold tracking-[0.2em] uppercase">Type or use voice command</p>
             </div>
         </div>
     );

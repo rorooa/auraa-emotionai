@@ -138,7 +138,7 @@ export function useEmotionAI() {
     };
 
     // Chat with AI
-    const chat = async (messages: { role: string; content: string }[]) => {
+    const chat = async (messages: { role: string; content: string }[], userInfo?: { name: string, interests: string, context: string }) => {
         try {
             setStatus("Thinking...");
             // Pass the current emotion in the body
@@ -146,9 +146,10 @@ export function useEmotionAI() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    name: "User", // You can update this to accept a name prop if needed
+                    name: userInfo?.name || "User",
                     emotion: emotion,
-                    messages: messages
+                    messages: messages,
+                    context: userInfo ? `User Interests: ${userInfo.interests}. User Context: ${userInfo.context}` : ""
                 }),
             });
 
@@ -163,6 +164,12 @@ export function useEmotionAI() {
         }
     };
 
+    // Greeting logic
+    const greet = (name: string) => {
+        const text = `Hello ${name}, I am AURAA.`;
+        speak(text);
+    };
+
     return {
         emotion,
         status,
@@ -172,7 +179,9 @@ export function useEmotionAI() {
         canvasRef,
         startSystem,
         chat,
+        greet,
         proactiveEmotion,
-        clearProactiveTrigger
+        clearProactiveTrigger,
+        setEmotion // EXPOSED FOR DEBUGGING
     };
 }

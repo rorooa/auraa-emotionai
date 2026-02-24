@@ -4,7 +4,7 @@ from groq import Groq
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-def generate_llm_reply(name, emotion, messages):
+def generate_llm_reply(name, emotion, messages, context=None):
     PLAYLISTS = {
         "sad": "https://open.spotify.com/playlist/37i9dQZF1DX3rxVfibe1L0?si=xaY-KLI3TjKwi1Tu4lp2VQ",
         "angry": "https://open.spotify.com/playlist/37i9dQZF1DWU0ScTcjJBdj?si=bnBXTa-WTpWTwN1SDgowBA",
@@ -16,6 +16,7 @@ def generate_llm_reply(name, emotion, messages):
     system_prompt = (
         "You are an emotionally intelligent AI companion. "
         f"User Name: {name}. Current Emotion: {emotion}. "
+        f"{context if context else ''}"
         "Respond naturally and empathetically to the conversation history. "
         "Logic for recommendations:"
         "1. If the user is SAD, ANGRY, or HAPPY, ask gently: 'Would you like some music?'"

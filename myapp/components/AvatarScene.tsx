@@ -1,190 +1,250 @@
 "use client";
 
-import React, { useEffect, useRef, useImperativeHandle, forwardRef } from "react";
+import React, { useEffect, useRef, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useGLTF, Environment, ContactShadows } from "@react-three/drei";
+import { useFBX, useAnimations, Environment, Float, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 
-// Type definition for the ref we will expose to the parent
-export interface AvatarRef {
-    speak: (text: string) => void;
-    setEmotion: (emotion: string) => void;
-}
+// -------------------------------------------------------------------------
+// 🛠️ SHARED HOLOGRAPHIC MATERIALS
+// -------------------------------------------------------------------------
+const WireframeMaterial = {
+    uniforms: {
+        uTime: { value: 0 },
+        uColor: { value: new THREE.Color("#00aaff") },
+        uOpacity: { value: 0.6 },
+    },
+    vertexShader: `
+        varying vec3 vPosition;
+        varying vec3 vNormal;
+        void main() {
+            vPosition = position;
+            vNormal = normal;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+    `,
+    fragmentShader: `
+        uniform float uTime;
+        uniform vec3 uColor;
+        uniform float uOpacity;
+        varying vec3 vPosition;
+        varying vec3 vNormal;
+        void main() {
+            vec3 viewDirection = normalize(vec3(0.0, 0.0, 1.0));
+            float fresnel = pow(1.2 - dot(vNormal, viewDirection), 3.0);
+            float pulse = sin(uTime * 1.2) * 0.05 + 0.95;
+            float grid = sin(vPosition.x * 60.0) * sin(vPosition.y * 60.0) * sin(vPosition.z * 60.0);
+            grid = step(0.97, grid);
+            float alpha = uOpacity * (fresnel + grid * 0.4) * pulse;
+            gl_FragColor = vec4(uColor, alpha);
+        }
+    `
+};
 
 // -------------------------------------------------------------------------
-// 🤖 CYBERNETIC AI AVATAR (Procedural - No External Files Required)
+// 🤖 AVATAR 1: CLAUDIA (FBX Wireframe)
 // -------------------------------------------------------------------------
-const Model = forwardRef<THREE.Group, { emotion: string; isSpeaking: boolean }>((props, ref) => {
+const ClaudiaAvatar = ({ emotion, isSpeaking }: { emotion: string; isSpeaking: boolean }) => {
     const group = useRef<THREE.Group>(null);
-
-    // Internal refs for parts
-    const headRef = useRef<THREE.Group>(null);
-    const mouthRef = useRef<THREE.Mesh>(null);
-    const leftEyeRef = useRef<THREE.Mesh>(null);
-    const rightEyeRef = useRef<THREE.Mesh>(null);
-    const bodyRef = useRef<THREE.Mesh>(null);
-
-    // Color State
-    const eyeColor = useRef(new THREE.Color("#00ffff"));
-
-    // Handle Emotion Changes (Eye Color & Head Tilt)
-    const targetRotation = useRef({ x: 0, y: 0 });
+    const fbx = useFBX("/models/rp_claudia/rp_claudia_rigged_002_yup_a.fbx");
+    const { actions, names } = useAnimations(fbx.animations, group);
+    const holoColor = useMemo(() => new THREE.Color("#00aaff"), []);
 
     useEffect(() => {
-        switch (props.emotion) {
-            case "happy":
-                eyeColor.current.set("#00ff88"); // Green-ish
-                targetRotation.current = { x: -0.1, y: 0.1 };
-                break;
-            case "sad":
-                eyeColor.current.set("#0022ff"); // Deep Blue
-                targetRotation.current = { x: 0.2, y: -0.1 };
-                break;
-            case "angry":
-                eyeColor.current.set("#ff0000"); // Red
-                targetRotation.current = { x: 0.1, y: 0 };
-                break;
-            case "fear":
-                eyeColor.current.set("#aa00ff"); // Purple
-                targetRotation.current = { x: -0.05, y: 0 };
-                break;
-            default: // neutral
-                eyeColor.current.set("#00ffff"); // Cyan
-                targetRotation.current = { x: 0, y: 0 };
+        fbx.traverse((child) => {
+            if ((child as THREE.Mesh).isMesh) {
+                (child as THREE.Mesh).material = new THREE.ShaderMaterial({
+                    ...WireframeMaterial,
+                    transparent: true,
+                    depthWrite: false,
+                    blending: THREE.AdditiveBlending,
+                    side: THREE.DoubleSide,
+                });
+            }
+        });
+    }, [fbx]);
+
+    useEffect(() => {
+        if (actions && names.length > 0) {
+            const clipName = names.find(n => n.toLowerCase().includes("idle") || n.toLowerCase().includes("gesture")) || names[0];
+            actions[clipName]?.reset().fadeIn(0.5).play();
         }
-    }, [props.emotion]);
+    }, [actions, names]);
 
-    // Animation Loop
-    useFrame((state, delta) => {
-        if (!group.current || !headRef.current) return;
-
-        // 1. Idle Floating
+    useFrame((state) => {
+        if (!group.current) return;
         const t = state.clock.getElapsedTime();
-        // Center vertically (0.0) and zoom out with camera instead
-        group.current.position.y = 0.0 + Math.sin(t * 1.5) * 0.05;
-
-        // 2. Smooth Head Look
-        headRef.current.rotation.x = THREE.MathUtils.lerp(headRef.current.rotation.x, targetRotation.current.x, delta * 3);
-        headRef.current.rotation.y = THREE.MathUtils.lerp(headRef.current.rotation.y, targetRotation.current.y, delta * 3);
-
-        // 3. Eye Pulse
-        if (leftEyeRef.current && rightEyeRef.current) {
-            // Lerp color
-            if (leftEyeRef.current.material instanceof THREE.MeshStandardMaterial) {
-                leftEyeRef.current.material.emissive.lerp(eyeColor.current, delta * 5);
-                leftEyeRef.current.material.color.lerp(eyeColor.current, delta * 5);
+        fbx.traverse((child) => {
+            if ((child as THREE.Mesh).isMesh) {
+                const mat = (child as THREE.Mesh).material as THREE.ShaderMaterial;
+                if (mat.uniforms) {
+                    mat.uniforms.uTime.value = t;
+                    mat.uniforms.uColor.value.lerp(holoColor, 0.1);
+                    mat.uniforms.uOpacity.value = isSpeaking ? 0.8 + Math.sin(t * 20) * 0.1 : 0.6;
+                }
             }
-            if (rightEyeRef.current.material instanceof THREE.MeshStandardMaterial) {
-                rightEyeRef.current.material.emissive.lerp(eyeColor.current, delta * 5);
-                rightEyeRef.current.material.color.lerp(eyeColor.current, delta * 5);
-            }
-        }
-
-        // 4. Data-Driven Lip Sync (Scale Mouth)
-        if (mouthRef.current) {
-            let targetScaleY = 0.2; // Closed
-
-            if (props.isSpeaking) {
-                const open = Math.sin(t * 25) * 0.5 + 0.5; // Fast oscillation
-                targetScaleY = 0.2 + (open * 0.8);
-            }
-
-            mouthRef.current.scale.y = THREE.MathUtils.lerp(mouthRef.current.scale.y, targetScaleY, delta * 15);
+        });
+        if (isSpeaking) {
+            group.current.position.x = Math.sin(t * 80) * 0.002;
+            group.current.scale.setScalar(0.012 + Math.sin(t * 15) * 0.0004);
+        } else {
+            group.current.position.x = 0;
+            group.current.scale.setScalar(0.012);
         }
     });
 
     return (
-        <group ref={group} dispose={null}>
-            {/* HEAD GROUP (Centered at 0,0,0 for easier camera targeting) */}
-            <group ref={headRef} position={[-1.5, 0.5, 0]}>
-                {/* Main Head Shape (Glassy) */}
-                <mesh castShadow receiveShadow>
-                    <sphereGeometry args={[0.65, 64, 64]} />
-                    <meshPhysicalMaterial
-                        color="#ffffff"
-                        roughness={0.2}
-                        metalness={0.2}
-                        transmission={0.4}
-                        thickness={1.5}
-                        clearcoat={0.8}
-                        ior={1.5}
+        <group ref={group} scale={0.012} position={[0, -0.1, 0]}>
+            <primitive object={fbx} />
+        </group>
+    );
+};
+
+// -------------------------------------------------------------------------
+// 🤖 AVATAR 2: CLASSIC EMOTION BOT (The 1st Avatar)
+// -------------------------------------------------------------------------
+const ClassicAvatar = ({ emotion, isSpeaking }: { emotion: string; isSpeaking: boolean }) => {
+    const headRef = useRef<THREE.Group>(null);
+    const eyeLRef = useRef<THREE.Mesh>(null);
+    const eyeRRef = useRef<THREE.Mesh>(null);
+    const mouthRef = useRef<THREE.Mesh>(null);
+
+    // Emotion Color Mapping
+    const emotionColors = useMemo(() => ({
+        neutral: "#00aaff",
+        happy: "#00ffcc",
+        sad: "#0044ff",
+        angry: "#ff2222",
+        fear: "#aa00ff"
+    }), []);
+
+    const currentColor = new THREE.Color(emotionColors[emotion as keyof typeof emotionColors] || emotionColors.neutral);
+
+    useFrame((state) => {
+        const t = state.clock.getElapsedTime();
+
+        // Subtle head movement
+        if (headRef.current) {
+            headRef.current.rotation.y = Math.sin(t * 0.5) * 0.2;
+            headRef.current.rotation.x = Math.cos(t * 0.3) * 0.1;
+
+            if (isSpeaking) {
+                headRef.current.position.y = Math.sin(t * 20) * 0.02;
+            } else {
+                headRef.current.position.y = 0;
+            }
+        }
+
+        // Color transitions for eyes and mouth
+        [eyeLRef, eyeRRef, mouthRef].forEach(ref => {
+            if (ref.current) {
+                (ref.current.material as THREE.MeshStandardMaterial).emissive.lerp(currentColor, 0.1);
+                (ref.current.material as THREE.MeshStandardMaterial).color.lerp(currentColor, 0.1);
+            }
+        });
+
+        // Mouth animation when speaking
+        if (mouthRef.current && isSpeaking) {
+            mouthRef.current.scale.y = 0.5 + Math.sin(t * 30) * 0.5;
+        } else if (mouthRef.current) {
+            mouthRef.current.scale.y = 0.2;
+        }
+    });
+
+    return (
+        <group scale={0.6} position={[0, 0.5, 0]}>
+            {/* The Body */}
+            <mesh position={[0, -1.2, 0]}>
+                <capsuleGeometry args={[0.6, 1.2, 4, 16]} />
+                <meshStandardMaterial
+                    color="#1e293b"
+                    transparent
+                    opacity={0.4}
+                    wireframe
+                />
+            </mesh>
+
+            {/* The Head Group */}
+            <group ref={headRef}>
+                {/* Round Face (Sphere) */}
+                <mesh>
+                    <sphereGeometry args={[0.8, 32, 32]} />
+                    <meshStandardMaterial
+                        color="#0f172a"
+                        transparent
+                        opacity={0.3}
+                        roughness={0.1}
+                        metalness={0.8}
                     />
                 </mesh>
 
-                {/* Inner Brain / Core (Glowing) */}
-                <mesh scale={0.55}>
-                    <icosahedronGeometry args={[0.8, 2]} />
-                    <meshBasicMaterial color="#ffffff" wireframe transparent opacity={0.15} />
+                {/* Holographic Outline */}
+                <mesh scale={1.05}>
+                    <sphereGeometry args={[0.8, 32, 32]} />
+                    <meshBasicMaterial color="#00aaff" wireframe transparent opacity={0.1} />
                 </mesh>
 
                 {/* Left Eye */}
-                <mesh ref={leftEyeRef} position={[-0.22, 0.1, 0.58]}>
-                    <sphereGeometry args={[0.10, 32, 32]} />
-                    <meshStandardMaterial color="#00ffff" emissive="#00ffff" emissiveIntensity={3} toneMapped={false} />
+                <mesh ref={eyeLRef} position={[-0.3, 0.2, 0.65]}>
+                    <sphereGeometry args={[0.1, 16, 16]} />
+                    <meshStandardMaterial emissiveIntensity={2} />
                 </mesh>
 
                 {/* Right Eye */}
-                <mesh ref={rightEyeRef} position={[0.22, 0.1, 0.58]}>
-                    <sphereGeometry args={[0.10, 32, 32]} />
-                    <meshStandardMaterial color="#00ffff" emissive="#00ffff" emissiveIntensity={3} toneMapped={false} />
+                <mesh ref={eyeRRef} position={[0.3, 0.2, 0.65]}>
+                    <sphereGeometry args={[0.1, 16, 16]} />
+                    <meshStandardMaterial emissiveIntensity={2} />
                 </mesh>
 
-                {/* Mouth (Bar) */}
-                <mesh ref={mouthRef} position={[0, -0.28, 0.6]} rotation={[0, 0, 1.57]}>
-                    <capsuleGeometry args={[0.04, 0.2, 4, 8]} />
-                    <meshStandardMaterial color="#1a1a1a" roughness={0.2} metalness={0.8} />
-                </mesh>
-            </group>
-
-            {/* BODY GROUP (Lower down) */}
-            <group position={[-1.5, -1.3, 0]}>
-                <mesh ref={bodyRef}>
-                    <capsuleGeometry args={[0.35, 1.5, 4, 16]} />
-                    <meshPhysicalMaterial color="#e0e0e0" roughness={0.2} metalness={0.8} />
-                </mesh>
-
-                {/* Glowing Core in Chest */}
-                <mesh position={[0, 0.4, 0.3]}>
-                    <circleGeometry args={[0.12, 32]} />
-                    <meshBasicMaterial color="#00ffff" transparent opacity={0.6} />
+                {/* Mouth */}
+                <mesh ref={mouthRef} position={[0, -0.2, 0.7]} rotation={[0, 0, 0]}>
+                    <boxGeometry args={[0.3, 0.1, 0.05]} />
+                    <meshStandardMaterial emissiveIntensity={2} />
                 </mesh>
             </group>
-
         </group>
     );
-});
+};
 
-Model.displayName = "AvatarModel";
+// -------------------------------------------------------------------------
+// 🛸 PROJECTOR BASE
+// -------------------------------------------------------------------------
+const ProjectorBase = ({ color }: { color: THREE.Color }) => (
+    <group position={[0, -0.4, 0]} scale={0.4}>
+        <mesh position={[0, 0.16, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[0.9, 1.0, 64]} />
+            <meshBasicMaterial color={color} transparent opacity={0.8} />
+        </mesh>
+    </group>
+);
 
 interface AvatarSceneProps {
     emotion: string;
     isSpeaking: boolean;
+    avatarId?: string;
 }
 
-export default function AvatarScene({ emotion, isSpeaking }: AvatarSceneProps) {
+export default function AvatarScene({ emotion, isSpeaking, avatarId = "avatar1" }: AvatarSceneProps) {
+    const holoColor = useMemo(() => new THREE.Color("#00aaff"), []);
+
     return (
-        <div className="w-full h-full min-h-[500px]">
-            {/* Professional Studio Lighting & Camera Setup */}
-            <Canvas shadows camera={{ position: [0, 0, 8], fov: 35 }}>
-                <color attach="background" args={['#050505']} />
+        <div className="w-full h-full min-h-[600px] cursor-default">
+            <Canvas camera={{ position: [0, 0, 5], fov: 30 }}>
+                <color attach="background" args={['#020617']} />
+                <ambientLight intensity={0.9} />
+                <pointLight position={[10, 10, 10]} intensity={3} color="#00aaff" />
+                <Environment preset="night" />
 
-                {/* Ambient base */}
-                <ambientLight intensity={0.3} />
-
-                {/* Key Light (Warm) */}
-                <spotLight position={[5, 5, 5]} angle={0.3} penumbra={1} intensity={2} castShadow color="#ffeedd" />
-
-                {/* Fill Light (Cool) */}
-                <pointLight position={[-5, 0, 5]} intensity={1} color="#6d6aff" />
-
-                {/* Rim Light for separation */}
-                <spotLight position={[0, 5, -5]} intensity={3} color="#00ffff" distance={10} />
-
-                <Environment preset="night" blur={0.8} />
-
-                <Model emotion={emotion} isSpeaking={isSpeaking} />
-
-                <ContactShadows opacity={0.6} scale={10} blur={2.5} far={4} color="#000000" />
+                <group position={[-0.8, -0.8, 0]}>
+                    <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
+                        {avatarId === "avatar1" ? (
+                            <ClaudiaAvatar emotion={emotion} isSpeaking={isSpeaking} />
+                        ) : (
+                            <ClassicAvatar emotion={emotion} isSpeaking={isSpeaking} />
+                        )}
+                    </Float>
+                    <ProjectorBase color={holoColor} />
+                </group>
             </Canvas>
         </div>
     );
