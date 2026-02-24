@@ -1,5 +1,5 @@
 
-# 🎭 Emotion Companion AI
+#  Emotion Companion AI
 
 > **An interactive AI that sees, hears, and empathizes with you.**
 
@@ -9,15 +9,15 @@
 
 **Emotion Companion** is a cutting-edge web application that uses real-time computer vision to detect your emotions via webcam and responds with an empathetic 3D avatar. The avatar interacts with you using natural voice conversations and lip-syncing animations, powered by state-of-the-art Large Language Models (LLMs).
 
-## ✨ Features
+##  Features
 
-- **👀 Real-time Emotion Detection**: Analyzes facial expressions instantly using DeepFace and OpenCV.
+- **Real-time Emotion Detection**: Analyzes facial expressions instantly using DeepFace and OpenCV.
 - **🗣️ Natural Voice Interaction**: Talk to the avatar, and it talks back with lip-sync.
 - **🤖 Empathetic AI**: Powered by Groq (Llama-3) to provide supportive and context-aware responses.
 - **🎨 3D Avatar**: A fully animated 3D character rendered with Three.js / React Three Fiber.
 - **⚡ Reactive UI**: Modern, glassmorphism-inspired interface built with Next.js and TailwindCSS.
 
-## 🏗️ Tech Stack
+##  Tech Stack
 
 ### Frontend (`/myapp`)
 - **Framework**: [Next.js](https://nextjs.org/) (React 19)
@@ -32,7 +32,7 @@
 - **AI/LLM**: Groq API (Llama-3)
 - **Real-time**: Python-SocketIO
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Prerequisites
 - **Node.js** (v18+ recommended)
@@ -78,7 +78,7 @@ cd myapp
 npm install
 ```
 
-## 🏃‍♂️ Running the Application
+##  Running the Application
 
 You need to run both the backend and frontend servers.
 
@@ -107,7 +107,7 @@ npm run dev
 ```
 *Note: This requires the backend venv to be named `venv2` inside the `backend` folder.*
 
-## 📂 Project Structure
+##  Project Structure
 
 ```
 ├── backend/                # FastAPI Backend
@@ -129,7 +129,7 @@ npm run dev
 └── package.json            # Root scripts
 ```
 
-## 🤝 Contributing
+##  Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
