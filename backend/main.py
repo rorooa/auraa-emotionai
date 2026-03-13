@@ -34,7 +34,11 @@ fastapi_app.include_router(auth.router)
 # REST CORS (for /chat, /emotion)
 fastapi_app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:3000",
+        "https://emotions-recognition-chatbotai.vercel.app",
+        "*" # Fallback
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -43,7 +47,10 @@ fastapi_app.add_middleware(
 # ---------------- SOCKET.IO (CRITICAL FIX) ----------------
 sio = socketio.AsyncServer(
     async_mode="asgi",
-    cors_allowed_origins="*"  # ✅ REQUIRED for polling handshake
+    cors_allowed_origins=[
+        "http://localhost:3000",
+        "https://emotions-recognition-chatbotai.vercel.app"
+    ]
 )
 
 app = socketio.ASGIApp(
