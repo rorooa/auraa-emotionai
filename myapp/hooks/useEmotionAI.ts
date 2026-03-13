@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { getSocket } from "../lib/socket";
+import { getSocket } from "@/lib/socket";
 
 export function useEmotionAI() {
     const [emotion, setEmotion] = useState("neutral");

@@ -2,7 +2,7 @@
 
 import { useTheme } from "next-themes";
 import { Mic, Moon, Sun, Zap, User, Volume2 } from "lucide-react";
-import { cn } from "../lib/utils";
+import { cn } from "@/lib/utils";
 import AudioVisualizer from "./AudioVisualizer";
 
 interface ControlPanelProps {
