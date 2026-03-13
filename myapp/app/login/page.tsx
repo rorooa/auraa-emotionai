@@ -28,20 +28,28 @@ export default function LoginPage() {
                 ? { username: formData.username, password: formData.password }
                 : formData;
 
-            const res = await fetch(endpoint, {
+            const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+            const res = await fetch(`${backendUrl}${endpoint}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body)
             });
 
             if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.detail || "Authentication failed");
+                const text = await res.text();
+                let errorMessage = "Authentication failed";
+                try {
+                    const data = JSON.parse(text);
+                    errorMessage = data.detail || errorMessage;
+                } catch (e) {
+                    errorMessage = "Server is starting up... Please try again in 30 seconds.";
+                }
+                throw new Error(errorMessage);
             }
 
             const data = await res.json();
             localStorage.setItem("auraa_token", data.access_token);
-            localStorage.setItem("userName", formData.username); // Fallback for UI
+            localStorage.setItem("userName", formData.username);
             
             router.push("/");
         } catch (err: any) {

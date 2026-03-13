@@ -31,7 +31,6 @@ export function useEmotionAI() {
             const voices = window.speechSynthesis.getVoices();
             if (voices.length > 0) {
                 setAvailableVoices(voices);
-                // Default: prefer a female English voice
                 const preferred = voices.find(v =>
                     v.lang.startsWith("en") && v.name.toLowerCase().includes("female")
                 ) || voices.find(v => v.lang.startsWith("en")) || voices[0];
@@ -66,58 +65,33 @@ export function useEmotionAI() {
                 });
 
                 socket.on("emotion", (data: { emotion: string }) => {
-                    console.log("Socket Data:", data);
                     setEmotion(data.emotion);
-                    setHeartbeat(prev => prev + 1); // Force effect to run
+                    setHeartbeat(prev => prev + 1);
                 });
             }
 
             // Start Frame Loop
             if (intervalRef.current) clearInterval(intervalRef.current);
-            
             intervalRef.current = setInterval(() => {
                 const socket = socketRef.current;
                 if (!videoRef.current || !canvasRef.current || !socket || !socket.connected) return;
-
                 const ctx = canvasRef.current.getContext("2d");
                 if (!ctx || videoRef.current.videoWidth === 0) return;
-
                 canvasRef.current.width = videoRef.current.videoWidth;
                 canvasRef.current.height = videoRef.current.videoHeight;
-
                 ctx.drawImage(videoRef.current, 0, 0);
-
                 const imageData = canvasRef.current.toDataURL("image/jpeg", 0.6);
-                
-                // Prevent sending empty data
                 if (imageData.length > 50) {
                     socket.emit("emotion", { image: imageData });
                 }
-
-            }, 8000); // 8s interval
+            }, 8000);
 
             return () => {
                 if (intervalRef.current) clearInterval(intervalRef.current);
             };
-
         } catch (err: any) {
-            console.error("Camera Error details:", err);
-            if (err.name === 'NotFoundError') {
-                setStatus("Retrying Camera...");
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    if (videoRef.current) videoRef.current.srcObject = stream;
-                    setStatus("System Online (Fallback)");
-                } catch (e) {
-                    setStatus("No Camera Found (Check Hardware)");
-                }
-            } else if (err.name === 'NotAllowedError') {
-                setStatus("Camera Denied (Check Browser Icons)");
-            } else if (err.name === 'NotReadableError') {
-                setStatus("Camera In Use by Other App");
-            } else {
-                setStatus(`Camera Error: ${err.name || "Unknown"}`);
-            }
+            console.error("Camera Error:", err);
+            setStatus("Hardware Error");
         }
     };
 
@@ -128,40 +102,27 @@ export function useEmotionAI() {
             setEmotionCount(0);
             return;
         }
-
         if (emotion === lastEmotion) {
             const newCount = emotionCount + 1;
             setEmotionCount(newCount);
-            console.log(`[EmotionAI] Emotion: ${emotion} | Count: ${newCount}/3`);
-
-            // Trigger if we see the same strong emotion 3 times (3 * 8s = 24s)
             if (newCount >= 3 && ["sad", "angry", "happy", "fear"].includes(emotion)) {
-
-                // Only trigger if not already speaking/thinking
                 if (!isSpeaking) {
-                    console.log("Triggering Proactive Chat for:", emotion);
                     setProactiveEmotion(emotion);
                 }
-
-                // Reset count so we don't spam every 8s
                 setEmotionCount(0);
             }
         } else {
-            console.log(`[EmotionAI] Emotion Changed: ${lastEmotion} -> ${emotion}`);
             setLastEmotion(emotion);
             setEmotionCount(1);
         }
     }, [emotion, heartbeat]);
 
-    // Helper to clear the trigger after it's handled
     const clearProactiveTrigger = () => setProactiveEmotion(null);
-
 
     // Text to Speech
     const speak = (text: string) => {
         window.speechSynthesis.cancel();
         const utter = new SpeechSynthesisUtterance(text);
-        utter.rate = 1.0;
         if (selectedVoice) utter.voice = selectedVoice;
         utter.onstart = () => setIsSpeaking(true);
         utter.onend = () => setIsSpeaking(false);
@@ -175,12 +136,12 @@ export function useEmotionAI() {
             const token = localStorage.getItem("auraa_token");
             if (!token) {
                 window.location.href = "/login";
-                return { reply: "Authentication required.", recommendation: { type: "none" } };
+                return { reply: "Auth required.", recommendation: { type: "none" } };
             }
 
             setStatus("Thinking...");
-            // Pass the current emotion in the body
-            const response = await fetch("/chat", {
+            const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+            const response = await fetch(`${backendUrl}/chat`, {
                 method: "POST",
                 headers: { 
                     "Content-Type": "application/json",
@@ -200,28 +161,28 @@ export function useEmotionAI() {
                 return { reply: "Session expired.", recommendation: { type: "none" } };
             }
 
+            if (!response.ok) {
+                const text = await response.text();
+                try {
+                    const errorData = JSON.parse(text);
+                    return { reply: errorData.detail || "Error", recommendation: { type: "none" } };
+                } catch (e) {
+                    return { reply: "My brain is warming up. Please try again in 30 seconds.", recommendation: { type: "none" } };
+                }
+            }
+
             const data = await response.json();
             setStatus("Speaking...");
             speak(data.reply);
             return data;
         } catch (e) {
             console.error(e);
-            setStatus("Network Error");
-            return { reply: "I couldn't reach my brain.", recommendation: { type: "none" } };
+            setStatus("Disconnected");
+            return { reply: "I couldn't reach my brain. Please refresh the page.", recommendation: { type: "none" } };
         }
     };
 
-    // Greeting logic
-    const greet = (name: string) => {
-        const text = `Hello ${name}, I am AURAA.`;
-        speak(text);
-    };
-
-    // EXPOSED FOR DEBUGGING
-    const handleSetEmotion = (emo: string) => {
-        setEmotion(emo);
-        setHeartbeat(prev => prev + 1); // Force effect to progress the count
-    };
+    const greet = (name: string) => speak(`Hello ${name}, I am AURAA.`);
 
     return {
         emotion,
@@ -236,7 +197,7 @@ export function useEmotionAI() {
         greet,
         proactiveEmotion,
         clearProactiveTrigger,
-        setEmotion: handleSetEmotion,
+        setEmotion: (emo: string) => { setEmotion(emo); setHeartbeat(prev => prev + 1); },
         availableVoices,
         selectedVoice,
         setSelectedVoice,
