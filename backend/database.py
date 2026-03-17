@@ -1,33 +1,44 @@
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, ForeignKey, Text
-from sqlalchemy.orm import sessionmaker, declarative_base
-import datetime
+import firebase_admin
+from firebase_admin import credentials, firestore
+import os
+import json
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./emotion_app.db"
+# Initialize Firebase Admin
+# Check for environment variable first (for Render/Production)
+firebase_config_env = os.getenv("FIREBASE_SERVICE_ACCOUNT")
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+if firebase_config_env:
+    try:
+        # Parse the JSON string from environment variable
+        cred_dict = json.loads(firebase_config_env)
+        cred = credentials.Certificate(cred_dict)
+    except Exception as e:
+        print(f"[ERROR] Failed to parse FIREBASE_SERVICE_ACCOUNT env var: {e}")
+        # Fallback to file if it exists
+        cred = credentials.Certificate("firebase-key.json")
+else:
+    # Local development: use the JSON file
+    if os.path.exists("firebase-key.json"):
+        cred = credentials.Certificate("firebase-key.json")
+    else:
+        raise FileNotFoundError("firebase-key.json not found and FIREBASE_SERVICE_ACCOUNT env var not set.")
 
-Base = declarative_base()
+firebase_admin.initialize_app(cred)
+db_firestore = firestore.client()
 
-class User(Base):
-    __tablename__ = "users"
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True)
-    email = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    # Extra profile settings
-    language_preference = Column(String, default="English")
+# Helper classes for Firestore documents
+class User:
+    def __init__(self, id, username, email, hashed_password, language_preference="English"):
+        self.id = id
+        self.username = username
+        self.email = email
+        self.hashed_password = hashed_password
+        self.language_preference = language_preference
 
-class ChatHistory(Base):
-    __tablename__ = "chat_history"
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    role = Column(String) # 'user' or 'system'
-    encrypted_content = Column(Text) # The encrypted message
-    detected_emotion = Column(String) # Optional detected emotion for the query
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-
-Base.metadata.create_all(bind=engine)
+class ChatHistory:
+    def __init__(self, user_id, role, encrypted_content, detected_emotion, created_at):
+        self.user_id = user_id
+        self.role = role
+        self.encrypted_content = encrypted_content
+        self.detected_emotion = detected_emotion
+        self.created_at = created_at
