@@ -4,7 +4,7 @@
     "private": true,
     "scripts": {
         "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
-        "backend": "cd backend && .\\venv2\\Scripts\\python -m uvicorn main:app --port 8000",
+        "backend": "cd backend && .\\venv_new\\Scripts\\python -m uvicorn main:app --port 8000",
         "frontend": "cd myapp && npm run dev"
     },
     "devDependencies": {

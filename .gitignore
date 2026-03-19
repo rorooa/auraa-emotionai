@@ -58,3 +58,9 @@ Thumbs.db
 # Temp test files
 backend/fertest.txt
 backend/test_output.txt
+
+# Firebase & Venv
+backend/firebase-key.json
+venv_new/
+venv_fixed/
+venv_clean/

@@ -84,7 +84,7 @@ export function useEmotionAI() {
                 if (imageData.length > 50) {
                     socket.emit("emotion", { image: imageData });
                 }
-            }, 8000);
+            }, 2000); // Increased frequency for real-time reactivity (was 8000)
 
             return () => {
                 if (intervalRef.current) clearInterval(intervalRef.current);
@@ -183,6 +183,27 @@ export function useEmotionAI() {
     };
 
     const greet = (name: string) => speak(`Hello ${name}, I am AURAA.`);
+    
+    const getHistory = async () => {
+        try {
+            const token = localStorage.getItem("auraa_token");
+            if (!token) return [];
+            
+            const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+            const response = await fetch(`${backendUrl}/history`, {
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                return data.history;
+            }
+            return [];
+        } catch (e) {
+            console.error("Fetch history error:", e);
+            return [];
+        }
+    };
 
     return {
         emotion,
@@ -194,6 +215,7 @@ export function useEmotionAI() {
         canvasRef,
         startSystem,
         chat,
+        getHistory,
         greet,
         proactiveEmotion,
         clearProactiveTrigger,

@@ -1,249 +1,191 @@
 "use client";
 
-import React, { useEffect, useRef, useMemo } from "react";
+import React, { useEffect, useRef, useMemo, Suspense } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useFBX, useAnimations, Environment, Float, useGLTF } from "@react-three/drei";
+import { useAnimations, Environment, Float, useGLTF, ContactShadows, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
+import AIAvatar from "./AIAvatar";
 
-// -------------------------------------------------------------------------
-// 🛠️ SHARED HOLOGRAPHIC MATERIALS
-// -------------------------------------------------------------------------
-const WireframeMaterial = {
-    uniforms: {
-        uTime: { value: 0 },
-        uColor: { value: new THREE.Color("#00aaff") },
-        uOpacity: { value: 0.6 },
-    },
-    vertexShader: `
-        varying vec3 vPosition;
-        varying vec3 vNormal;
-        void main() {
-            vPosition = position;
-            vNormal = normal;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-    `,
-    fragmentShader: `
-        uniform float uTime;
-        uniform vec3 uColor;
-        uniform float uOpacity;
-        varying vec3 vPosition;
-        varying vec3 vNormal;
-        void main() {
-            vec3 viewDirection = normalize(vec3(0.0, 0.0, 1.0));
-            float fresnel = pow(1.2 - dot(vNormal, viewDirection), 3.0);
-            float pulse = sin(uTime * 1.2) * 0.05 + 0.95;
-            float grid = sin(vPosition.x * 60.0) * sin(vPosition.y * 60.0) * sin(vPosition.z * 60.0);
-            grid = step(0.97, grid);
-            float alpha = uOpacity * (fresnel + grid * 0.4) * pulse;
-            gl_FragColor = vec4(uColor, alpha);
-        }
-    `
-};
-
-// -------------------------------------------------------------------------
-// 🤖 AVATAR 1: CLAUDIA (FBX Wireframe)
-// -------------------------------------------------------------------------
-const ClaudiaAvatar = ({ emotion, isSpeaking }: { emotion: string; isSpeaking: boolean }) => {
-    const group = useRef<THREE.Group>(null);
-    const fbx = useFBX("/models/rp_claudia/rp_claudia_rigged_002_yup_a.fbx");
-    const { actions, names } = useAnimations(fbx.animations, group);
-    const holoColor = useMemo(() => new THREE.Color("#00aaff"), []);
-
+// ─────────────────────────────────────────────────────────────────────────────
+// 🧠 SHARED MOUSE TRACKING
+// ─────────────────────────────────────────────────────────────────────────────
+function useMouse() {
+    const mouse = useRef({ x: 0, y: 0 });
     useEffect(() => {
-        fbx.traverse((child) => {
-            if ((child as THREE.Mesh).isMesh) {
-                (child as THREE.Mesh).material = new THREE.ShaderMaterial({
-                    ...WireframeMaterial,
-                    transparent: true,
-                    depthWrite: false,
-                    blending: THREE.AdditiveBlending,
-                    side: THREE.DoubleSide,
+        const onMove = (e: MouseEvent) => {
+            mouse.current = {
+                x: (e.clientX / window.innerWidth - 0.5) * 2,
+                y: (e.clientY / window.innerHeight - 0.5) * -2,
+            };
+        };
+        window.addEventListener("mousemove", onMove);
+        return () => window.removeEventListener("mousemove", onMove);
+    }, []);
+    return mouse;
+}
+
+function findByName(group: THREE.Object3D, ...keywords: string[]): THREE.Object3D | undefined {
+    let found: THREE.Object3D | undefined;
+    group.traverse((obj) => {
+        if (found) return;
+        const name = obj.name.toLowerCase();
+        if (keywords.every(k => name.includes(k.toLowerCase()))) found = obj;
+    });
+    return found;
+}
+
+function applyMorph(group: THREE.Object3D, morphName: string, targetValue: number, lerpFactor = 0.15) {
+    group.traverse((child) => {
+        const mesh = child as any;
+        if (mesh.isMesh && mesh.morphTargetDictionary && mesh.morphTargetInfluences) {
+            const idx = mesh.morphTargetDictionary[morphName];
+            if (idx !== undefined) {
+                mesh.morphTargetInfluences[idx] = THREE.MathUtils.lerp(mesh.morphTargetInfluences[idx], targetValue, lerpFactor);
+            }
+        }
+    });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 🤖 CLASSIC BOT
+// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// 🤖 EXPRESSIVE CLASSIC BOT
+// ─────────────────────────────────────────────────────────────────────────────
+const ClassicAvatar = ({ emotion, isSpeaking }: { emotion: string; isSpeaking: boolean }) => {
+    const headRef = useRef<THREE.Group>(null);
+    const eyeLRef = useRef<THREE.Group>(null);
+    const eyeRRef = useRef<THREE.Group>(null);
+    const mouthRef = useRef<THREE.Mesh>(null);
+    const coreRef = useRef<THREE.Mesh>(null);
+    const mouse = useMouse();
+    
+    // Emotion-specific config: color, eye rotation (Z), mouth rotation (Z), mouth scale
+    const emotionConfig = {
+        neutral: { color: "#00aaff", eyeRot: 0, mouthRot: Math.PI, mouthScale: [1, 0.1, 1], eyeScale: [1, 0.8, 1] },
+        happy:   { color: "#00ffcc", eyeRot: 0, mouthRot: Math.PI, mouthScale: [1.2, 0.8, 1], eyeScale: [1, 0.5, 1] },
+        sad:     { color: "#0044ff", eyeRot: Math.PI, mouthRot: 0, mouthScale: [1.0, 0.6, 1], eyeScale: [1, 0.5, 1] },
+        angry:   { color: "#ff2222", eyeRot: 0.5, mouthRot: 0, mouthScale: [1.4, 0.1, 1], eyeScale: [1, 0.3, 1] },
+        fear:    { color: "#ffcc00", eyeRot: 0, mouthRot: Math.PI, mouthScale: [0.5, 1.2, 1], eyeScale: [0.5, 1.2, 1] },
+        disgust: { color: "#88ff00", eyeRot: -0.2, mouthRot: 0, mouthScale: [1.2, 0.4, 1], eyeScale: [1, 0.2, 1] },
+        surprise:{ color: "#ffffff", eyeRot: 0, mouthRot: Math.PI, mouthScale: [1.0, 1.4, 1], eyeScale: [1.4, 1.5, 1] },
+    } as any;
+
+    useFrame((state) => {
+        const t = state.clock.getElapsedTime();
+        // Normalize emotion and default to neutral
+        const currentEmotion = emotion?.toLowerCase() || "neutral";
+        const config = emotionConfig[currentEmotion] || emotionConfig.neutral;
+
+        if (headRef.current) {
+            // Direct X tracking (Look Right when mouse is Right)
+            // Inverted Y tracking (Look Up when mouse is Top)
+            headRef.current.rotation.y = THREE.MathUtils.lerp(headRef.current.rotation.y, mouse.current.x * 0.4, 0.1);
+            headRef.current.rotation.x = THREE.MathUtils.lerp(headRef.current.rotation.x, -mouse.current.y * 0.2, 0.1);
+            headRef.current.position.y = Math.sin(t * 2) * 0.05; // Gentle float
+        }
+        
+        const targetColor = new THREE.Color(config.color);
+        
+        // Handle Eyes
+        [eyeLRef, eyeRRef].forEach(ref => {
+            if (ref.current) {
+                ref.current.rotation.z = THREE.MathUtils.lerp(ref.current.rotation.z, config.eyeRot, 0.1);
+                ref.current.scale.x = THREE.MathUtils.lerp(ref.current.scale.x, config.eyeScale?.[0] || 1, 0.1);
+                ref.current.scale.y = THREE.MathUtils.lerp(ref.current.scale.y, config.eyeScale?.[1] || 1, 0.1);
+                ref.current.traverse((child: any) => {
+                    if (child.isMesh) {
+                        child.material.emissive.lerp(targetColor, 0.1);
+                        child.material.color.lerp(targetColor, 0.1);
+                    }
                 });
             }
         });
-    }, [fbx]);
 
-    useEffect(() => {
-        if (actions && names.length > 0) {
-            const clipName = names.find(n => n.toLowerCase().includes("idle") || n.toLowerCase().includes("gesture")) || names[0];
-            actions[clipName]?.reset().fadeIn(0.5).play();
+        // Handle Mouth
+        if (mouthRef.current) {
+            const mouthSpeakScale = isSpeaking ? 1.5 + Math.sin(t * 25) * 0.5 : 1.0;
+            mouthRef.current.rotation.z = THREE.MathUtils.lerp(mouthRef.current.rotation.z, config.mouthRot, 0.1);
+            mouthRef.current.scale.x = THREE.MathUtils.lerp(mouthRef.current.scale.x, config.mouthScale[0], 0.1);
+            mouthRef.current.scale.y = THREE.MathUtils.lerp(mouthRef.current.scale.y, config.mouthScale[1] * mouthSpeakScale, 0.1);
+            (mouthRef.current.material as THREE.MeshStandardMaterial).emissive.lerp(targetColor, 0.1);
+            (mouthRef.current.material as THREE.MeshStandardMaterial).color.lerp(targetColor, 0.1);
         }
-    }, [actions, names]);
 
-    useFrame((state) => {
-        if (!group.current) return;
-        const t = state.clock.getElapsedTime();
-        fbx.traverse((child) => {
-            if ((child as THREE.Mesh).isMesh) {
-                const mat = (child as THREE.Mesh).material as THREE.ShaderMaterial;
-                if (mat.uniforms) {
-                    mat.uniforms.uTime.value = t;
-                    mat.uniforms.uColor.value.lerp(holoColor, 0.1);
-                    mat.uniforms.uOpacity.value = isSpeaking ? 0.8 + Math.sin(t * 20) * 0.1 : 0.6;
-                }
-            }
-        });
-        if (isSpeaking) {
-            group.current.position.x = Math.sin(t * 80) * 0.002;
-            group.current.scale.setScalar(0.012 + Math.sin(t * 15) * 0.0004);
-        } else {
-            group.current.position.x = 0;
-            group.current.scale.setScalar(0.012);
+        // Handle Core
+        if (coreRef.current) {
+            coreRef.current.scale.setScalar(0.8 + Math.sin(t * 4) * 0.2);
+            (coreRef.current.material as THREE.MeshStandardMaterial).emissive.lerp(targetColor, 0.1);
+            (coreRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 2 + Math.sin(t * 3) * 1;
         }
     });
 
     return (
-        <group ref={group} scale={0.012} position={[0, -0.1, 0]}>
-            <primitive object={fbx} />
-        </group>
-    );
-};
-
-// -------------------------------------------------------------------------
-// 🤖 AVATAR 2: CLASSIC EMOTION BOT (The 1st Avatar)
-// -------------------------------------------------------------------------
-const ClassicAvatar = ({ emotion, isSpeaking }: { emotion: string; isSpeaking: boolean }) => {
-    const headRef = useRef<THREE.Group>(null);
-    const eyeLRef = useRef<THREE.Mesh>(null);
-    const eyeRRef = useRef<THREE.Mesh>(null);
-    const mouthRef = useRef<THREE.Mesh>(null);
-
-    // Emotion Color Mapping
-    const emotionColors = useMemo(() => ({
-        neutral: "#00aaff",
-        happy: "#00ffcc",
-        sad: "#0044ff",
-        angry: "#ff2222",
-        fear: "#aa00ff"
-    }), []);
-
-    const currentColor = new THREE.Color(emotionColors[emotion as keyof typeof emotionColors] || emotionColors.neutral);
-
-    useFrame((state) => {
-        const t = state.clock.getElapsedTime();
-
-        // Subtle head movement
-        if (headRef.current) {
-            headRef.current.rotation.y = Math.sin(t * 0.5) * 0.2;
-            headRef.current.rotation.x = Math.cos(t * 0.3) * 0.1;
-
-            if (isSpeaking) {
-                headRef.current.position.y = Math.sin(t * 20) * 0.02;
-            } else {
-                headRef.current.position.y = 0;
-            }
-        }
-
-        // Color transitions for eyes and mouth
-        [eyeLRef, eyeRRef, mouthRef].forEach(ref => {
-            if (ref.current) {
-                (ref.current.material as THREE.MeshStandardMaterial).emissive.lerp(currentColor, 0.1);
-                (ref.current.material as THREE.MeshStandardMaterial).color.lerp(currentColor, 0.1);
-            }
-        });
-
-        // Mouth animation when speaking
-        if (mouthRef.current && isSpeaking) {
-            mouthRef.current.scale.y = 0.5 + Math.sin(t * 30) * 0.5;
-        } else if (mouthRef.current) {
-            mouthRef.current.scale.y = 0.2;
-        }
-    });
-
-    return (
-        <group scale={0.6} position={[0, 0.5, 0]}>
-            {/* The Body */}
-            <mesh position={[0, -1.2, 0]}>
-                <capsuleGeometry args={[0.6, 1.2, 4, 16]} />
-                <meshStandardMaterial
-                    color="#1e293b"
-                    transparent
-                    opacity={0.4}
-                    wireframe
-                />
-            </mesh>
-
-            {/* The Head Group */}
+        <group scale={0.4} position={[0, 1.1, 0]}>
             <group ref={headRef}>
-                {/* Round Face (Sphere) */}
+                {/* Glass Outer Shell */}
                 <mesh>
-                    <sphereGeometry args={[0.8, 32, 32]} />
-                    <meshStandardMaterial
-                        color="#0f172a"
-                        transparent
-                        opacity={0.3}
-                        roughness={0.1}
-                        metalness={0.8}
-                    />
+                    <sphereGeometry args={[0.9, 32, 32]} />
+                    <meshStandardMaterial color="#0f172a" transparent opacity={0.2} metalness={0.9} roughness={0.1} />
                 </mesh>
 
-                {/* Holographic Outline */}
-                <mesh scale={1.05}>
-                    <sphereGeometry args={[0.8, 32, 32]} />
-                    <meshBasicMaterial color="#00aaff" wireframe transparent opacity={0.1} />
+                {/* Neural Core */}
+                <mesh ref={coreRef}>
+                    <octahedronGeometry args={[0.4, 2]} />
+                    <meshStandardMaterial emissiveIntensity={5} transparent opacity={0.8} />
                 </mesh>
 
-                {/* Left Eye */}
-                <mesh ref={eyeLRef} position={[-0.3, 0.2, 0.65]}>
-                    <sphereGeometry args={[0.1, 16, 16]} />
-                    <meshStandardMaterial emissiveIntensity={2} />
-                </mesh>
+                {/* Expressive Eyes */}
+                <group position={[-0.35, 0.2, 0.7]} ref={eyeLRef}>
+                    <mesh rotation={[Math.PI/2, 0, 0]}>
+                        <torusGeometry args={[0.15, 0.05, 16, 32, Math.PI]} />
+                        <meshStandardMaterial emissiveIntensity={3} />
+                    </mesh>
+                </group>
+                <group position={[0.35, 0.2, 0.7]} ref={eyeRRef}>
+                    <mesh rotation={[Math.PI/2, 0, 0]}>
+                        <torusGeometry args={[0.15, 0.05, 16, 32, Math.PI]} />
+                        <meshStandardMaterial emissiveIntensity={3} />
+                    </mesh>
+                </group>
 
-                {/* Right Eye */}
-                <mesh ref={eyeRRef} position={[0.3, 0.2, 0.65]}>
-                    <sphereGeometry args={[0.1, 16, 16]} />
-                    <meshStandardMaterial emissiveIntensity={2} />
-                </mesh>
-
-                {/* Mouth */}
-                <mesh ref={mouthRef} position={[0, -0.2, 0.7]} rotation={[0, 0, 0]}>
-                    <boxGeometry args={[0.3, 0.1, 0.05]} />
-                    <meshStandardMaterial emissiveIntensity={2} />
+                {/* Expressive Mouth */}
+                <mesh position={[0, -0.3, 0.75]} ref={mouthRef}>
+                    <torusGeometry args={[0.2, 0.04, 16, 32, Math.PI]} />
+                    <meshStandardMaterial emissiveIntensity={3} />
                 </mesh>
             </group>
         </group>
     );
 };
 
-// -------------------------------------------------------------------------
-// 🛸 PROJECTOR BASE
-// -------------------------------------------------------------------------
-const ProjectorBase = ({ color }: { color: THREE.Color }) => (
-    <group position={[0, -0.4, 0]} scale={0.4}>
-        <mesh position={[0, 0.16, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-            <ringGeometry args={[0.9, 1.0, 64]} />
-            <meshBasicMaterial color={color} transparent opacity={0.8} />
-        </mesh>
-    </group>
-);
-
-interface AvatarSceneProps {
-    emotion: string;
-    isSpeaking: boolean;
-    avatarId?: string;
-}
-
-export default function AvatarScene({ emotion, isSpeaking, avatarId = "avatar1" }: AvatarSceneProps) {
-    const holoColor = useMemo(() => new THREE.Color("#00aaff"), []);
-
+// ─────────────────────────────────────────────────────────────────────────────
+// 🚀 MAIN
+// ─────────────────────────────────────────────────────────────────────────────
+export default function AvatarScene({ emotion, isSpeaking, avatarId = "female" }: { emotion: string; isSpeaking: boolean; avatarId?: string }) {
     return (
-        <div className="w-full h-full min-h-[600px] cursor-default">
-            <Canvas camera={{ position: [0, 0, 5], fov: 30 }}>
-                <color attach="background" args={['#020617']} />
-                <ambientLight intensity={0.9} />
-                <pointLight position={[10, 10, 10]} intensity={3} color="#00aaff" />
-                <Environment preset="night" />
+        <div className="w-full h-full"> 
+            <Canvas camera={{ position: [0, 1.4, 2.0], fov: 35 }} gl={{ antialias: true, alpha: true }}>
+                <ambientLight intensity={5.0} />
+                <directionalLight position={[0, 5, 5]} intensity={6.0} color="#ffffff" castShadow />
+                <directionalLight position={[-5, 2, 2]} intensity={3.5} color="#ffffff" />
+                <Environment preset="studio" />
+                
+                {/* Camera Control: Locks the camera onto the upper body */}
+                <OrbitControls 
+                    target={[0, 1.1, 0]} 
+                    enablePan={false} 
+                    enableZoom={false}
+                    minPolarAngle={Math.PI / 2 - 0.2}
+                    maxPolarAngle={Math.PI / 2 + 0.1}
+                />
 
-                <group position={[-0.8, -0.8, 0]}>
-                    <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
-                        {avatarId === "avatar1" ? (
-                            <ClaudiaAvatar emotion={emotion} isSpeaking={isSpeaking} />
-                        ) : (
-                            <ClassicAvatar emotion={emotion} isSpeaking={isSpeaking} />
-                        )}
-                    </Float>
-                    <ProjectorBase color={holoColor} />
+                {/* Stage Position: Centered in its 40% container */}
+                <group position={[0, 0, 0]}>
+                    <Suspense fallback={null}>
+                        {avatarId === "ai" && <AIAvatar modelPath="/models/ai_avatar.glb" emotion={emotion} isSpeaking={isSpeaking} />}
+                        {avatarId === "classic" && <ClassicAvatar emotion={emotion} isSpeaking={isSpeaking} />}
+                    </Suspense>
                 </group>
             </Canvas>
         </div>

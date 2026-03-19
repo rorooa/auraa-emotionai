@@ -10,6 +10,19 @@ export default function Dashboard() {
   const [userName, setUserName] = useState("Luffy");
   const [isEditingName, setIsEditingName] = useState(false);
 
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePosition({
+        x: (e.clientX / window.innerWidth - 0.5) * 20,
+        y: (e.clientY / window.innerHeight - 0.5) * 20,
+      });
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
+
   useEffect(() => {
     const token = localStorage.getItem("auraa_token");
     if (!token) {
@@ -34,55 +47,99 @@ export default function Dashboard() {
   };
 
   return (
-    <main className="relative h-screen w-screen overflow-hidden bg-black font-jura text-white selection:bg-indigo-500/30">
+    <main className="relative h-screen w-screen overflow-hidden bg-[#020205] font-jura text-white selection:bg-indigo-500/30">
+      {/* SCANLINE OVERLAY */}
+      <div className="absolute inset-0 z-[100] pointer-events-none opacity-[0.03] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%]" />
+
+      {/* GRID BACKGROUND */}
+      <div className="absolute inset-0 z-0 opacity-20 pointer-events-none" 
+           style={{ 
+             backgroundImage: `linear-gradient(to right, #1e1b4b 1px, transparent 1px), linear-gradient(to bottom, #1e1b4b 1px, transparent 1px)`,
+             backgroundSize: '40px 40px',
+             transform: `perspective(1000px) rotateX(60deg) translateY(${mousePosition.y * 0.5}px) scale(2)`,
+             transformOrigin: 'center center'
+           }} 
+      />
+
       {/* VIDEO BACKGROUND */}
-      <div className="absolute inset-0 z-0">
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover opacity-60"
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        <motion.div
+          animate={{ x: mousePosition.x * -0.5, y: mousePosition.y * -0.5 }}
+          className="absolute inset-0 w-full h-full"
         >
-          <source src="/background.mp4" type="video/mp4" />
-        </video>
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover opacity-50 scale-110"
+          >
+            <source src="/background.mp4" type="video/mp4" />
+          </video>
+        </motion.div>
         {/* Gradient Overlays for depth */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/80" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/60" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#020205]/100 via-transparent to-[#020205]/100" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#020205]/80 via-transparent to-[#020205]/80" />
 
         {/* Glassmorphism Grain effect */}
-        <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+        <div className="absolute inset-0 opacity-[0.05] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
       </div>
 
-      {/* INTERACTIVE BACKGROUND ELEMENTS */}
+      {/* INTERACTIVE BACKGROUND ELEMENTS (PARALLAX) */}
       <div className="absolute inset-0 z-0 pointer-events-none">
-        <div className="absolute top-[10%] left-[10%] w-[400px] h-[400px] bg-indigo-500/10 blur-[120px] rounded-full animate-pulse" />
-        <div className="absolute bottom-[10%] right-[10%] w-[400px] h-[400px] bg-purple-500/10 blur-[120px] rounded-full animate-pulse delay-700" />
-
-        {/* ENHANCED SYMBOL: Stylistic 'A' in Michroma */}
-        <motion.div
-          initial={{ scale: 0, rotate: -45 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ type: "spring", stiffness: 200, damping: 15 }}
-          className="absolute left-[35px] top-[45px] z-20"
-        >
-          <div className="relative">
-            <motion.div
-              animate={{ opacity: [0.3, 0.8, 0.3], scale: [1, 1.2, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="absolute inset-0 bg-indigo-500 blur-xl rounded-full"
-            />
-            <div className="relative h-12 w-12 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 shadow-[0_0_20px_rgba(255,255,255,0.3)] flex items-center justify-center">
-              <span className="text-white text-3xl font-michroma font-bold select-none">A</span>
-              <motion.div
-                animate={{ opacity: [0, 1, 0] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-                className="absolute inset-0 border border-indigo-400/50 rounded-xl"
-              />
-            </div>
-          </div>
-        </motion.div>
+        <motion.div 
+          animate={{ x: mousePosition.x * 2, y: mousePosition.y * 2 }}
+          className="absolute top-[5%] left-[15%] w-[600px] h-[600px] bg-indigo-600/10 blur-[150px] rounded-full animate-pulse" 
+        />
+        <motion.div 
+          animate={{ x: mousePosition.x * -3, y: mousePosition.y * -3 }}
+          className="absolute bottom-[5%] right-[15%] w-[500px] h-[500px] bg-cyan-500/10 blur-[130px] rounded-full animate-pulse delay-1000" 
+        />
+        
+        {/* Floating Futuristic Particles */}
+        {[...Array(5)].map((_, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0 }}
+            animate={{ 
+              opacity: [0.1, 0.4, 0.1], 
+              x: [Math.random() * 1000, Math.random() * 1000],
+              y: [Math.random() * 800, Math.random() * 800],
+              scale: [0.8, 1.2, 0.8]
+            }}
+            transition={{ duration: 10 + Math.random() * 10, repeat: Infinity }}
+            className="absolute w-1 h-1 bg-cyan-400 rounded-full shadow-[0_0_10px_cyan]"
+          />
+        ))}
       </div>
+
+      {/* ENHANCED SYMBOL: Stylistic 'A' in Michroma */}
+      <motion.div
+        animate={{ 
+          x: mousePosition.x * 1.5, 
+          y: mousePosition.y * 1.5,
+          rotateY: mousePosition.x * 0.5,
+          rotateX: mousePosition.y * -0.5
+        }}
+        className="absolute left-[35px] top-[45px] z-20"
+      >
+        <div className="relative">
+          <motion.div
+            animate={{ opacity: [0.3, 0.8, 0.3], scale: [1, 1.3, 1] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="absolute inset-0 bg-cyan-500 blur-2xl rounded-full"
+          />
+          <div className="relative h-14 w-14 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/20 shadow-[0_0_30px_rgba(34,211,238,0.4)] flex items-center justify-center overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-cyan-500/20" />
+            <span className="text-white text-4xl font-michroma font-bold select-none relative z-10">A</span>
+            <motion.div
+              animate={{ y: ["-100%", "200%"] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              className="absolute top-0 left-0 w-full h-1/2 bg-white/10 blur-sm pointer-events-none"
+            />
+          </div>
+        </div>
+      </motion.div>
 
       {/* TOP LEFT: LOGO & TAGLINE */}
       <motion.div
@@ -91,25 +148,28 @@ export default function Dashboard() {
         transition={{ duration: 1, ease: "easeOut" }}
         className="absolute left-[105px] top-[32px] z-10"
       >
-        <motion.h1
-          whileHover={{ scale: 1.05, filter: "brightness(1.5)" }}
-          animate={{ y: [0, -3, 0] }}
-          transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-          className="text-8xl font-bold tracking-tighter drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)] cursor-default select-none bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-100 to-gray-400 font-audiowide"
+        <motion.div
+          animate={{ rotateX: mousePosition.y * -0.2, rotateY: mousePosition.x * 0.2 }}
+          style={{ perspective: 1000 }}
         >
-          AURAA
-        </motion.h1>
+          <motion.h1
+            whileHover={{ scale: 1.05, filter: "brightness(1.5)" }}
+            className="text-9xl font-bold tracking-tighter cursor-default select-none bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-200 to-cyan-400 font-audiowide drop-shadow-[0_10px_30px_rgba(99,102,241,0.3)]"
+          >
+            AURAA
+          </motion.h1>
+        </motion.div>
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5, duration: 1 }}
-          className="mt-4 space-y-1"
+          className="mt-6 space-y-2 border-l border-indigo-500/50 pl-6"
         >
-          <p className="text-xl font-bold opacity-90 tracking-widest uppercase">An AI That Understands You</p>
-          <p className="text-lg font-medium opacity-60 italic">— Beyond Words —</p>
-          <div className="flex gap-4 mt-2">
-            {["Detect", "Understand", "Support"].map((word, i) => (
-              <span key={word} className="text-xs tracking-[0.3em] uppercase px-2 py-1 border border-white/10 rounded-md bg-white/5 backdrop-blur-sm">
+          <p className="text-2xl font-bold opacity-90 tracking-[0.2em] uppercase text-indigo-100 font-michroma">Mindscape Protocol v1.0</p>
+          <p className="text-lg font-medium opacity-60 italic text-cyan-200">— Bridging Emotion & Intelligence —</p>
+          <div className="flex gap-3 mt-4">
+            {["Pulse", "Synapse", "Aura"].map((word, i) => (
+              <span key={word} className="text-[10px] tracking-[0.4em] uppercase px-3 py-1 border border-cyan-500/30 rounded-full bg-cyan-500/5 backdrop-blur-md shadow-[0_0_15px_rgba(34,211,238,0.1)]">
                 {word}
               </span>
             ))}
@@ -175,7 +235,7 @@ export default function Dashboard() {
                 animate={{ x: [0, 5, 0] }}
                 transition={{ repeat: Infinity, duration: 1.5 }}
               >
-                →
+                {"→"}
               </motion.div>
             </span>
           </motion.button>

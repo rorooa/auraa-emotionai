@@ -5,6 +5,7 @@ import jwt
 import os
 
 from passlib.context import CryptContext
+from firebase_admin import auth as firebase_auth
 from database import db_firestore, User
 
 router = APIRouter()
@@ -14,8 +15,23 @@ SECRET_KEY = os.getenv("SECRET_KEY", "SUPER_SECRET_DEV_KEY_PLEASE_CHANGE")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 7 days
 
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class FirebaseLogin(BaseModel):
+    id_token: str
+
+class UserCreate(BaseModel):
+    username: str
+    email: EmailStr
+    password: str
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
 def get_db():
-    # Firebase Firestore client is already initialized
     return db_firestore
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
@@ -28,18 +44,42 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-class UserCreate(BaseModel):
-    username: str
-    email: EmailStr
-    password: str
+@router.post("/firebase-login", response_model=Token)
+def firebase_login(payload: FirebaseLogin, db=Depends(get_db)):
+    try:
+        # Verify the ID token sent from the client
+        decoded_token = firebase_auth.verify_id_token(payload.id_token)
+        uid = decoded_token['uid']
+        email = decoded_token.get('email')
+        name = decoded_token.get('name', email.split('@')[0] if email else "User")
 
-class UserLogin(BaseModel):
-    username: str
-    password: str
+        # Check if user exists in Firestore, if not create them
+        docs = db.collection("users").where("email", "==", email).limit(1).get()
+        
+        if not docs:
+            # Create a new user record linked to Firebase UID
+            user_data = {
+                "username": name,
+                "email": email,
+                "firebase_uid": uid,
+                "language_preference": "English",
+                "created_at": datetime.utcnow()
+            }
+            db.collection("users").document(uid).set(user_data)
+            username = name
+        else:
+            user_dict = docs[0].to_dict()
+            username = user_dict["username"]
 
-class Token(BaseModel):
-    access_token: str
-    token_type: str
+        # Create our local JWT for the session
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": username}, expires_delta=access_token_expires
+        )
+        return {"access_token": access_token, "token_type": "bearer"}
+    except Exception as e:
+        print(f"[ERROR] Firebase login failed: {e}")
+        raise HTTPException(status_code=401, detail=f"Invalid Firebase token: {str(e)}")
 
 @router.post("/register", response_model=Token)
 def register(user: UserCreate, db=Depends(get_db)):
@@ -61,7 +101,6 @@ def register(user: UserCreate, db=Depends(get_db)):
         "created_at": datetime.utcnow()
     }
     
-    # Firestore generates a random ID if we use add(), or we can use username as ID
     new_user_ref = db.collection("users").add(user_data)
     
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -111,7 +150,6 @@ def get_current_user(token: str, db=Depends(get_db)):
     user_id = user_doc.id
     user_dict = user_doc.to_dict()
     
-    # Return a dummy object with attributes to match previous SQLAlchemy model usage
     from types import SimpleNamespace
     user_obj = SimpleNamespace(
         id=user_id,
