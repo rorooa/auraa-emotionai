@@ -184,8 +184,9 @@ export default function LoginPage() {
                     rotateY: mousePosition.x * 0.05,
                 }}
                 transition={{ 
-                    initial: { duration: 1, ease: "easeOut" },
-                    animate: { type: "spring", damping: 25, stiffness: 120 }
+                    type: "spring", 
+                    damping: 25, 
+                    stiffness: 120 
                 }}
                 className="z-10 w-full max-w-md p-8 bg-slate-900/40 backdrop-blur-[40px] border border-white/10 rounded-[2.5rem] shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] relative overflow-hidden group"
             >
