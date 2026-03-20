@@ -59,6 +59,10 @@ Thumbs.db
 backend/fertest.txt
 backend/test_output.txt
 
+# Logs & Temp Output
+*.log
+backend/out.txt
+
 # Firebase & Venv
 backend/firebase-key.json
 venv_new/

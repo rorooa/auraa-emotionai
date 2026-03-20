@@ -53,6 +53,12 @@ export default function LoginPage() {
         setIsLoading(true);
         setError("");
 
+        if (!auth) {
+            setError("Authentication service is unavailable. Please check your environment variables.");
+            setIsLoading(false);
+            return;
+        }
+
         try {
             let userCredential;
             if (isLogin) {
@@ -85,6 +91,12 @@ export default function LoginPage() {
     const handleGoogleLogin = async () => {
         setIsLoading(true);
         setError("");
+        if (!auth) {
+            setError("Authentication service is unavailable.");
+            setIsLoading(false);
+            return;
+        }
+
         try {
             const provider = new GoogleAuthProvider();
             const userCredential = await signInWithPopup(auth, provider);

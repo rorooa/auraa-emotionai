@@ -213,7 +213,7 @@ export default function FaceScanner({ videoRef, isConnected, emotionCount }: Fac
                 <div className="flex items-center justify-between w-full px-2 mt-1">
                     <span className="text-[8px] uppercase tracking-widest text-slate-400">Trigger</span>
                     <div className="flex gap-1">
-                        {[1, 2, 3].map((step) => (
+                        {[1, 2].map((step) => (
                             <div 
                                 key={step} 
                                 className={`w-2 h-2 rounded-full border border-white/50 transition-colors ${

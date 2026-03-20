@@ -133,11 +133,9 @@ def get_history(token: str = Depends(oauth2_scheme), db=Depends(get_db)):
     user = get_current_user(token, db)
     docs = db.collection("chat_history") \
              .where("user_id", "==", user.id) \
-             .order_by("created_at", direction="DESCENDING") \
              .limit(50).stream()
     
-    decrypted_history = []
-    # Firestore stream returns items in order
+    # Convert to list and sort in-memory to avoid index requirement
     temp_list = []
     for doc in docs:
         h = doc.to_dict()
@@ -145,7 +143,20 @@ def get_history(token: str = Depends(oauth2_scheme), db=Depends(get_db)):
             "role": h["role"],
             "content": decrypt_text(h["encrypted_content"]),
             "emotion": h.get("detected_emotion", ""),
-            "timestamp": h["created_at"].isoformat() if hasattr(h["created_at"], "isoformat") else str(h["created_at"])
+            "created_at": h["created_at"]
+        })
+    
+    # Sort by created_at descending
+    temp_list.sort(key=lambda x: x["created_at"], reverse=True)
+    
+    # Format for response
+    decrypted_history = []
+    for item in temp_list:
+        decrypted_history.append({
+            "role": item["role"],
+            "content": item["content"],
+            "emotion": item["emotion"],
+            "timestamp": item["created_at"].isoformat() if hasattr(item["created_at"], "isoformat") else str(item["created_at"])
         })
     
     # Reverse so oldest is first again (to match previous logic)

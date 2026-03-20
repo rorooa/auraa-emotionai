@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import ControlPanel from "@/components/ControlPanel";
-import ChatInterface from "@/components/ChatInterface";
+import { useState, useEffect, useCallback } from "react";
+import ControlHUD from "@/components/spatial/ControlHUD";
+import ChatOverlay from "@/components/spatial/ChatOverlay";
+import GlassPanel from "@/components/spatial/GlassPanel";
 import AvatarScene from "@/components/AvatarScene";
 import MediaOverlay from "@/components/MediaOverlay";
+import EmotionTracker from "@/components/spatial/EmotionTracker";
 import dynamic from "next/dynamic";
 import { useEmotionAI } from "@/hooks/useEmotionAI";
 import UserDashboard from "@/components/UserDashboard";
@@ -28,6 +30,7 @@ export default function CompanionPage() {
         proactiveEmotion,
         clearProactiveTrigger,
         videoRef,
+        canvasRef,
         emotionCount,
         getHistory
     } = useEmotionAI();
@@ -44,20 +47,38 @@ export default function CompanionPage() {
     // Recommendation State
     const [recommendation, setRecommendation] = useState<any>(null);
     const [chatHistory, setChatHistory] = useState<{ role: 'user' | 'ai'; text: string }[]>([]);
+    const [isTrackerOpen, setIsTrackerOpen] = useState(false);
+    const [trackerData, setTrackerData] = useState<{ emotion: string; timestamp: string }[]>([]);
 
-    useEffect(() => {
-        const loadHistory = async () => {
-            const history = await getHistory();
-            if (history && history.length > 0) {
-                const formatted = history.map((item: any) => ({
-                    role: item.role === "system" ? "ai" : "user",
-                    text: item.content
+    // On-demand history loading (no auto-load for faster startup)
+    const handleLoadHistory = useCallback(async () => {
+        const history = await getHistory();
+        if (history && history.length > 0) {
+            const formatted = history.map((item: any) => ({
+                role: item.role === "system" ? "ai" : "user",
+                text: item.content
+            }));
+            setChatHistory(formatted);
+            // Also build tracker data from emotion metadata
+            const emotions = history
+                .filter((item: any) => item.emotion)
+                .map((item: any) => ({
+                    emotion: item.emotion,
+                    timestamp: item.timestamp || new Date().toISOString()
                 }));
-                setChatHistory(formatted);
-            }
-        };
-        loadHistory();
-    }, []);
+            setTrackerData(emotions);
+            return formatted;
+        }
+        return [];
+    }, [getHistory]);
+
+    const handleOpenTracker = useCallback(async () => {
+        // Load history data if not already loaded
+        if (trackerData.length === 0) {
+            await handleLoadHistory();
+        }
+        setIsTrackerOpen(true);
+    }, [trackerData, handleLoadHistory]);
 
     const handleAvatarSelect = (id: string) => {
         setSelectedAvatar(id);
@@ -180,10 +201,15 @@ export default function CompanionPage() {
     }
 
     return (
-        <main className="h-screen w-screen overflow-hidden bg-black text-white relative flex flex-col md:flex-row p-4 md:p-8 gap-6 selection:bg-indigo-500/30 font-jura">
+        <main className="h-screen w-screen overflow-hidden bg-[#020205] text-white relative selection:bg-indigo-500/30 font-jura flex items-center justify-center perspective-[1000px]">
 
-            {/* VIDEO BACKGROUND (Subtle) */}
+            {/* Hidden Camera Stream & Processing Buffer */}
+            <video ref={videoRef} autoPlay playsInline muted className="fixed top-0 left-0 w-full h-full opacity-0 pointer-events-none object-contain z-[-1]" />
+            <canvas ref={canvasRef} className="hidden" />
+
+            {/* Ambient Background */}
             <div className="absolute inset-0 z-0 pointer-events-none">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_#020205_100%)] z-10 opacity-70" />
                 <video
                     autoPlay
                     loop
@@ -193,82 +219,95 @@ export default function CompanionPage() {
                 >
                     <source src="/background.mp4" type="video/mp4" />
                 </video>
-                <div className="absolute inset-0 bg-gradient-to-tr from-black via-black/80 to-indigo-900/40" />
+                <div className="absolute inset-0 bg-gradient-to-tr from-[#020205] via-transparent to-[#020205]" />
             </div>
 
-            {/* UI Overlays */}
-            {recommendation && (
-                <MediaOverlay 
-                    type={recommendation.type} 
-                    query={recommendation.query}
-                    music_url={recommendation.music_url}
-                    movie_query={recommendation.movie_query}
-                    onClose={() => setRecommendation(null)} 
-                />
-            )}
-            
-            <div className="absolute top-24 left-8 z-50">
-                <FaceScanner videoRef={videoRef} isConnected={isConnected} emotionCount={emotionCount} />
-            </div>
-            
-            <UserDashboard
-                isOpen={isProfileOpen}
-                onClose={() => setIsProfileOpen(false)}
-                currentInfo={userInfo}
-                onSave={(info) => setUserInfo(info)}
-            />
-
-            {/* Left Sidebar */}
-            <div className="z-10 relative">
-                <ControlPanel
-                    status={status}
-                    emotion={emotion}
-                    isConnected={isConnected}
-                    onStart={startSystem}
-                    isSpeaking={isSpeaking}
-                    onManualEmotion={setEmotion}
-                    onOpenProfile={() => setIsProfileOpen(true)}
-                    availableVoices={availableVoices}
-                    selectedVoice={selectedVoice}
-                    onVoiceChange={setSelectedVoice}
-                />
-            </div>
-
-            {/* Main Stage (40/60 Split Layout) */}
-            <div className="flex-1 flex flex-row relative rounded-3xl overflow-hidden border border-white/10 shadow-inner bg-slate-50/50 dark:bg-slate-900/30 backdrop-blur-sm">
-
-                {/* Left Side: Avatar Canvas (40%) */}
-                <div className="w-[40%] h-full relative z-0 flex items-center justify-center">
-                    <AvatarScene emotion={emotion} isSpeaking={isSpeaking} avatarId={selectedAvatar || "classic"} />
-                    
-                    {/* Viewport Controls: Switch Avatar */}
-                    <div className="absolute top-6 left-6 z-10">
-                        <button
-                            onClick={() => setSelectedAvatar(null)}
-                            className="flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl hover:bg-blue-500/20 hover:border-blue-500/50 transition-all duration-300 text-white/70 hover:text-white text-xs tracking-widest uppercase font-bold group"
-                        >
-                            <span className="text-lg group-hover:rotate-90 transition-transform duration-500">🔄</span>
-                            Switch Avatar
-                        </button>
+            {/* UI Overlays (Recommendations, FaceScanner, Profile) */}
+            <div className="absolute inset-0 z-50 pointer-events-none">
+                {recommendation && (
+                    <div className="pointer-events-auto">
+                        <MediaOverlay 
+                            type={recommendation.type} 
+                            query={recommendation.query}
+                            music_url={recommendation.music_url}
+                            movie_query={recommendation.movie_query}
+                            onClose={() => setRecommendation(null)} 
+                        />
                     </div>
+                )}
+                
+                <div className="absolute top-6 left-1/2 -translate-x-1/2 pointer-events-auto scale-75 origin-top opacity-30 hover:opacity-100 transition-opacity">
+                    <FaceScanner videoRef={videoRef} isConnected={isConnected} emotionCount={emotionCount} />
                 </div>
-
-                {/* Right Side: Chat Interface (60%) */}
-                <div className="w-[60%] h-full relative z-10 flex flex-col justify-end">
-                    <ChatInterface
-                        onChat={handleChat}
-                        initialHistory={chatHistory}
-                        isThinking={status === "Thinking..."}
-                        proactiveEmotion={proactiveEmotion}
-                        onProactiveHandled={clearProactiveTrigger}
-                        userName={userInfo.name}
+                
+                <div className="pointer-events-auto">
+                    <UserDashboard
+                        isOpen={isProfileOpen}
+                        onClose={() => setIsProfileOpen(false)}
+                        currentInfo={userInfo}
+                        onSave={(info) => setUserInfo(info)}
+                    />
+                </div>
+                <div className="pointer-events-auto">
+                    <EmotionTracker
+                        isOpen={isTrackerOpen}
+                        onClose={() => setIsTrackerOpen(false)}
+                        data={trackerData}
                     />
                 </div>
             </div>
 
+            {/* Full-bleed 3D Canvas */}
+            <div className="absolute inset-0 z-0 pointer-events-none flex items-center justify-center pt-20">
+                <div className="w-full h-full lg:w-[80vw] lg:h-[110vh]">
+                    <AvatarScene emotion={emotion} isSpeaking={isSpeaking} avatarId={selectedAvatar || "classic"} />
+                </div>
+            </div>
+
+            {/* SPATIAL UI OVERLAYS */}
+            <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-between p-8 xl:p-12 max-w-[2000px] mx-auto">
+                
+                {/* Left Panel: Control HUD */}
+                <div className="pointer-events-auto w-[320px] h-[75vh]">
+                    <GlassPanel tilt className="w-full h-full p-1 border border-white/5 rounded-[2.2rem]">
+                        <div className="w-full h-full bg-[#0a0a0f]/40 rounded-[2rem] p-6 backdrop-blur-3xl shadow-inner border border-white/5">
+                            <ControlHUD 
+                                emotion={emotion || "Neutral"} 
+                                status={status} 
+                                isSpeaking={isSpeaking}
+                                onSettingsClick={() => setSelectedAvatar(null)} 
+                                isConnected={isConnected}
+                                onStart={startSystem}
+                                availableVoices={availableVoices}
+                                selectedVoice={selectedVoice}
+                                onVoiceChange={setSelectedVoice}
+                                onManualEmotion={setEmotion}
+                                onOpenProfile={() => setIsProfileOpen(true)}
+                                onOpenTracker={handleOpenTracker}
+                            />
+                        </div>
+                    </GlassPanel>
+                </div>
+
+                {/* Right Panel: Chat */}
+                <div className="pointer-events-auto w-[420px] h-[85vh]">
+                    <GlassPanel tilt className="w-full h-full p-1 border border-white/5 rounded-[2.2rem]">
+                        <div className="w-full h-full bg-[#0a0a0f]/40 rounded-[2rem] p-6 backdrop-blur-3xl shadow-inner border border-white/5 overflow-hidden">
+                            <ChatOverlay 
+                                onChat={handleChat} 
+                                initialHistory={chatHistory} 
+                                proactiveEmotion={proactiveEmotion}
+                                onProactiveHandled={clearProactiveTrigger}
+                                onLoadHistory={handleLoadHistory}
+                            />
+                        </div>
+                    </GlassPanel>
+                </div>
+            </div>
+
             {/* Floating Glow Effects */}
-            <div className="fixed -bottom-48 -left-48 w-96 h-96 bg-indigo-600/20 blur-[120px] rounded-full pointer-events-none" />
-            <div className="fixed -top-48 -right-48 w-96 h-96 bg-blue-600/20 blur-[120px] rounded-full pointer-events-none" />
+            <div className="fixed -bottom-48 -left-48 w-96 h-96 bg-indigo-600/10 blur-[150px] rounded-full pointer-events-none" />
+            <div className="fixed -top-48 -right-48 w-96 h-96 bg-cyan-600/10 blur-[150px] rounded-full pointer-events-none" />
         </main>
     );
 }

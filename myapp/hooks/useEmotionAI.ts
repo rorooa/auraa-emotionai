@@ -72,19 +72,32 @@ export function useEmotionAI() {
 
             // Start Frame Loop
             if (intervalRef.current) clearInterval(intervalRef.current);
-            intervalRef.current = setInterval(() => {
+            
+            const captureFrame = () => {
                 const socket = socketRef.current;
-                if (!videoRef.current || !canvasRef.current || !socket || !socket.connected) return;
-                const ctx = canvasRef.current.getContext("2d");
+                if (!videoRef.current || !socket || !socket.connected) return;
+                
+                // Use the ref canvas (which is now in the DOM for better browser support)
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                
+                const ctx = canvas.getContext("2d");
                 if (!ctx || videoRef.current.videoWidth === 0) return;
-                canvasRef.current.width = videoRef.current.videoWidth;
-                canvasRef.current.height = videoRef.current.videoHeight;
-                ctx.drawImage(videoRef.current, 0, 0);
-                const imageData = canvasRef.current.toDataURL("image/jpeg", 0.6);
-                if (imageData.length > 50) {
+                
+                canvas.width = videoRef.current.videoWidth;
+                canvas.height = videoRef.current.videoHeight;
+                ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+                
+                const imageData = canvas.toDataURL("image/jpeg", 0.7);
+                if (imageData.length > 100) {
+                    console.log("[useEmotionAI] Emitting frame to socket...");
                     socket.emit("emotion", { image: imageData });
                 }
-            }, 2000); // Increased frequency for real-time reactivity (was 8000)
+            };
+
+            // Run immediately and then every 8 seconds
+            captureFrame();
+            intervalRef.current = setInterval(captureFrame, 8000);
 
             return () => {
                 if (intervalRef.current) clearInterval(intervalRef.current);
@@ -105,7 +118,7 @@ export function useEmotionAI() {
         if (emotion === lastEmotion) {
             const newCount = emotionCount + 1;
             setEmotionCount(newCount);
-            if (newCount >= 3 && ["sad", "angry", "happy", "fear"].includes(emotion)) {
+            if (newCount >= 2 && ["sad", "angry", "happy", "fear", "surprise", "disgust"].includes(emotion)) {
                 if (!isSpeaking) {
                     setProactiveEmotion(emotion);
                 }
