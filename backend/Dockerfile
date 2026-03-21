@@ -12,5 +12,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-EXPOSE 8000
+# We use main.py as the entrypoint because it now handles the $PORT dynamically
 CMD ["python", "main.py"]
