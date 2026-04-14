@@ -8,6 +8,7 @@ interface UserInfo {
     interests: string;
     context: string;
     language: string;
+    personalityMode: string;
 }
 
 interface UserDashboardProps {
@@ -90,6 +91,21 @@ export default function UserDashboard({ isOpen, onClose, currentInfo, onSave }: 
                             <option value="Japanese" className="bg-slate-900">日本語</option>
                             <option value="Hindi" className="bg-slate-900">हिंदी</option>
                             <option value="Korean" className="bg-slate-900">한국어</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-[10px] uppercase tracking-widest font-bold mb-2 text-rose-400">Personality Core (Pro)</label>
+                        <select
+                            value={formData.personalityMode}
+                            onChange={e => setFormData({ ...formData, personalityMode: e.target.value })}
+                            className="w-full bg-rose-500/10 border border-rose-500/30 focus:border-rose-500/70 rounded-xl px-4 py-3.5 outline-none transition-all text-white font-medium appearance-none"
+                        >
+                            <option value="friend" className="bg-slate-900">Best Friend (Casual)</option>
+                            <option value="therapist" className="bg-slate-900">Therapist (Empathetic)</option>
+                            <option value="sassy" className="bg-slate-900">Sassy (Gen-Z & Witty)</option>
+                            <option value="philosopher" className="bg-slate-900">Philosopher (Deep)</option>
+                            <option value="mentor" className="bg-slate-900">Mentor (Direct & Motivating)</option>
                         </select>
                     </div>
 

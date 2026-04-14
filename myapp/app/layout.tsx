@@ -41,6 +41,8 @@ export const metadata: Metadata = {
 };
 
 import { ThemeProvider } from "@/components/theme-provider";
+import GoogleAnalytics from "@/components/GoogleAnalytics";
+import GlobalGuideButton from "@/components/GlobalGuideButton";
 
 export default function RootLayout({
   children,
@@ -58,7 +60,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <GoogleAnalytics />
           {children}
+          <GlobalGuideButton />
         </ThemeProvider>
       </body>
     </html>

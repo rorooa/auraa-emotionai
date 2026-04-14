@@ -113,8 +113,7 @@ export default function LoginPage() {
 
     const loginWithToken = async (userCredential: any) => {
         const idToken = await userCredential.user.getIdToken();
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
-        const res = await fetch(`${backendUrl}/firebase-login`, {
+        const res = await fetch(`/api/firebase-login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ id_token: idToken })
@@ -180,7 +179,7 @@ export default function LoginPage() {
                     ))}
 
                     {/* Noise Overlay */}
-                    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.08] mix-blend-overlay" />
+                    <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.08] mix-blend-overlay" />
                 </div>
             )}
 
@@ -270,7 +269,7 @@ export default function LoginPage() {
                         </motion.div>
                     )}
 
-                    {/* Email — always shown */}
+                    {/* Email â€” always shown */}
                     <div className="relative">
                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={20} />
                         <input 

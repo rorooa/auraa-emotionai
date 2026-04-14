@@ -75,23 +75,35 @@ export default function HeroSection() {
                     <source src="/background.mp4" type="video/mp4" />
                 </video>
                  {/* Glassmorphism Grain effect */}
-                <div className="absolute inset-0 opacity-[0.06] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+                <div className="absolute inset-0 opacity-[0.06] pointer-events-none bg-[url('/noise.svg')]" />
             </motion.div>
 
             <div className="relative z-10 flex flex-col items-center justify-center text-center px-4 w-full">
-                <div className="overflow-hidden pb-4">
+                <div className="overflow-hidden pb-2 sm:pb-4">
                     <motion.h1 
                         custom={0} initial="hidden" animate="visible" variants={titleVariants}
-                        className="text-7xl md:text-[10rem] font-bold tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-white/80 to-white/20 drop-shadow-2xl font-audiowide"
+                        className="text-6xl sm:text-7xl md:text-8xl lg:text-[10rem] xl:text-[12rem] 2xl:text-[14rem] font-bold tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-white/80 to-white/20 drop-shadow-2xl font-audiowide"
                     >
                         AURAA
                     </motion.h1>
                 </div>
                 
-                <div className="overflow-hidden mb-12">
+                {/* REVIEWS BADGE */}
+                <motion.div
+                    custom={0.5} initial="hidden" animate="visible" variants={titleVariants}
+                    className="mb-6 xl:mb-10 cursor-pointer z-20"
+                    onClick={() => router.push("/reviews")}
+                >
+                    <div className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all backdrop-blur-md shadow-lg hover:shadow-indigo-500/20">
+                        <span className="text-yellow-400 text-xs sm:text-sm">★★★★★</span>
+                        <span className="text-white/80 text-[10px] sm:text-xs xl:text-sm font-medium tracking-wide">4.8 from 200+ users</span>
+                    </div>
+                </motion.div>
+                
+                <div className="overflow-hidden mb-8 md:mb-12">
                     <motion.p 
                         custom={1} initial="hidden" animate="visible" variants={titleVariants}
-                        className="text-lg md:text-2xl tracking-[0.4em] uppercase text-white/50"
+                        className="text-xs sm:text-sm md:text-xl lg:text-2xl xl:text-3xl tracking-[0.2em] sm:tracking-[0.4em] uppercase text-white/50"
                     >
                         Mindscape Protocol v1.0
                     </motion.p>
@@ -99,23 +111,79 @@ export default function HeroSection() {
 
                 <motion.div 
                     custom={2} initial="hidden" animate="visible" variants={titleVariants}
-                    className="flex flex-wrap justify-center gap-4 mb-24"
+                    className="flex flex-wrap justify-center gap-3 sm:gap-4 mb-16 md:mb-24"
                 >
                     <FeatureTag>Pulse</FeatureTag>
                     <FeatureTag>Synapse</FeatureTag>
                     <FeatureTag>Aura</FeatureTag>
                 </motion.div>
 
-                <motion.div custom={3} initial="hidden" animate="visible" variants={titleVariants}>
+                <motion.div custom={3} initial="hidden" animate="visible" variants={titleVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 w-full max-w-3xl px-4">
                     <MagneticButton 
                         onClick={() => router.push("/companion")}
-                        className="group flex items-center gap-4 px-10 py-5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/30 rounded-full backdrop-blur-xl transition-all shadow-[0_0_30px_rgba(255,255,255,0.05)] hover:shadow-[0_0_40px_rgba(255,255,255,0.1)]"
+                        className="group flex items-center justify-center gap-3 px-6 py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/30 rounded-full backdrop-blur-xl transition-all shadow-[0_0_30px_rgba(255,255,255,0.05)] hover:shadow-[0_0_40px_rgba(255,255,255,0.1)]"
                     >
-                        <span className="text-sm font-bold tracking-[0.2em] uppercase text-white/90">Talk with AURAA</span>
+                        <span className="text-xs font-bold tracking-[0.15em] uppercase text-white/90">Talk with AURAA</span>
                         <motion.span 
                             animate={{ x: [0, 5, 0] }} 
                             transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
                             className="text-white/50 group-hover:text-white transition-colors"
+                        >
+                            →
+                        </motion.span>
+                    </MagneticButton>
+
+                    <MagneticButton 
+                        onClick={() => router.push("/rooms")}
+                        className="group flex items-center justify-center gap-3 px-6 py-4 bg-purple-500/5 hover:bg-purple-500/10 border border-purple-500/20 hover:border-purple-500/40 rounded-full backdrop-blur-xl transition-all"
+                    >
+                        <span className="text-xs font-bold tracking-[0.15em] uppercase text-purple-300/90">Aura Rooms</span>
+                        <motion.span 
+                            animate={{ x: [0, 5, 0] }} 
+                            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut", delay: 0.5 }}
+                            className="text-purple-400/50 group-hover:text-purple-300 transition-colors"
+                        >
+                            →
+                        </motion.span>
+                    </MagneticButton>
+
+                    <MagneticButton 
+                        onClick={() => router.push("/emotion-mirror")}
+                        className="group flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-pink-500/10 to-orange-500/10 hover:from-pink-500/20 hover:to-orange-500/20 border border-pink-500/20 hover:border-pink-400/50 rounded-full backdrop-blur-xl transition-all"
+                    >
+                        <span className="text-xs font-bold tracking-[0.15em] uppercase text-transparent bg-clip-text bg-gradient-to-r from-pink-300 to-orange-300">Emotion Mirror 🧠</span>
+                        <motion.span 
+                            animate={{ x: [0, 5, 0] }} 
+                            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut", delay: 1 }}
+                            className="text-pink-400/50 group-hover:text-pink-300 transition-colors"
+                        >
+                            →
+                        </motion.span>
+                    </MagneticButton>
+
+                    <MagneticButton 
+                        onClick={() => router.push("/confessions")}
+                        className="group flex items-center justify-center gap-3 px-6 py-4 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/50 rounded-full backdrop-blur-xl transition-all"
+                    >
+                        <span className="text-xs font-bold tracking-[0.15em] uppercase text-red-400">Confessions 🕵️</span>
+                        <motion.span 
+                            animate={{ x: [0, 5, 0] }} 
+                            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut", delay: 1.5 }}
+                            className="text-red-400/50 group-hover:text-red-300 transition-colors"
+                        >
+                            →
+                        </motion.span>
+                    </MagneticButton>
+
+                    <MagneticButton 
+                        onClick={() => router.push("/shapeshifter")}
+                        className="group flex items-center justify-center gap-3 px-6 py-4 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 hover:border-cyan-500/50 rounded-full backdrop-blur-xl transition-all"
+                    >
+                        <span className="text-xs font-bold tracking-[0.15em] uppercase text-cyan-400">Shapeshifter ⚡</span>
+                        <motion.span 
+                            animate={{ x: [0, 5, 0] }} 
+                            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut", delay: 2 }}
+                            className="text-cyan-400/50 group-hover:text-cyan-300 transition-colors"
                         >
                             →
                         </motion.span>

@@ -22,6 +22,16 @@ class Token(BaseModel):
 class FirebaseLogin(BaseModel):
     id_token: str
 
+class User(BaseModel):
+    id: str
+    username: str
+    email: str
+    language_preference: str = "English"
+    subscription_tier: str = "pro"
+    personality_mode: str = "friend"
+    relationship_memory: str = ""
+    custom_avatar_url: str | None = None
+
 class UserCreate(BaseModel):
     username: str
     email: EmailStr
@@ -155,6 +165,10 @@ def get_current_user(token: str, db=Depends(get_db)):
         id=user_id,
         username=user_dict["username"],
         email=user_dict["email"],
-        language_preference=user_dict.get("language_preference", "English")
+        language_preference=user_dict.get("language_preference", "English"),
+        subscription_tier=user_dict.get("subscription_tier", "pro"),  # DEFAULT TO PRO FOR LOCALHOST
+        personality_mode=user_dict.get("personality_mode", "friend"),
+        relationship_memory=user_dict.get("relationship_memory", ""),
+        custom_avatar_url=user_dict.get("custom_avatar_url", None)
     )
     return user_obj

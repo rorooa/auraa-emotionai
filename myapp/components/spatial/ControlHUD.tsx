@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { Activity, ShieldAlert, Cpu, Settings, Volume2, User, BarChart3 } from "lucide-react";
+import { Activity, ShieldAlert, Cpu, Settings, Volume2, User, BarChart3, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface ControlHUDProps {
@@ -16,6 +16,7 @@ interface ControlHUDProps {
     onManualEmotion?: (emotion: string) => void;
     onOpenProfile?: () => void;
     onOpenTracker?: () => void;
+    onTriggerProactive?: () => void;
 }
 
 export default function ControlHUD({ 
@@ -30,7 +31,8 @@ export default function ControlHUD({
     onVoiceChange,
     onManualEmotion,
     onOpenProfile,
-    onOpenTracker
+    onOpenTracker,
+    onTriggerProactive
 }: ControlHUDProps) {
     const e = emotion.toLowerCase();
     const intensity = e === "angry" || e === "fear" ? 90 : e === "happy" ? 75 : 30;
@@ -83,10 +85,10 @@ export default function ControlHUD({
 
                         {/* Manual Override Buttons (Hidden feature) */}
                         <div className="grid grid-cols-2 gap-2 mt-4 relative z-10 font-jura">
-                            <button onClick={() => onManualEmotion && onManualEmotion("sad")} className="px-2 py-1.5 text-[9px] font-bold tracking-widest uppercase bg-white/5 hover:bg-white/10 text-white/60 border border-white/5 rounded-xl transition-all hover:text-blue-300">Sad</button>
-                            <button onClick={() => onManualEmotion && onManualEmotion("happy")} className="px-2 py-1.5 text-[9px] font-bold tracking-widest uppercase bg-white/5 hover:bg-white/10 text-white/60 border border-white/5 rounded-xl transition-all hover:text-emerald-300">Happy</button>
-                            <button onClick={() => onManualEmotion && onManualEmotion("angry")} className="px-2 py-1.5 text-[9px] font-bold tracking-widest uppercase bg-white/5 hover:bg-white/10 text-white/60 border border-white/5 rounded-xl transition-all hover:text-rose-300">Angry</button>
-                            <button onClick={() => onManualEmotion && onManualEmotion("fear")} className="px-2 py-1.5 text-[9px] font-bold tracking-widest uppercase bg-white/5 hover:bg-white/10 text-white/60 border border-white/5 rounded-xl transition-all hover:text-purple-300">Fear</button>
+                            <button onClick={() => onManualEmotion && onManualEmotion("sad")} className="p-2 sm:px-2 sm:py-1.5 text-[10px] sm:text-[9px] font-bold tracking-widest uppercase bg-white/5 hover:bg-white/10 text-white/60 border border-white/5 rounded-xl transition-all hover:text-blue-300">Sad</button>
+                            <button onClick={() => onManualEmotion && onManualEmotion("happy")} className="p-2 sm:px-2 sm:py-1.5 text-[10px] sm:text-[9px] font-bold tracking-widest uppercase bg-white/5 hover:bg-white/10 text-white/60 border border-white/5 rounded-xl transition-all hover:text-emerald-300">Happy</button>
+                            <button onClick={() => onManualEmotion && onManualEmotion("angry")} className="p-2 sm:px-2 sm:py-1.5 text-[10px] sm:text-[9px] font-bold tracking-widest uppercase bg-white/5 hover:bg-white/10 text-white/60 border border-white/5 rounded-xl transition-all hover:text-rose-300">Angry</button>
+                            <button onClick={() => onManualEmotion && onManualEmotion("fear")} className="p-2 sm:px-2 sm:py-1.5 text-[10px] sm:text-[9px] font-bold tracking-widest uppercase bg-white/5 hover:bg-white/10 text-white/60 border border-white/5 rounded-xl transition-all hover:text-purple-300">Fear</button>
                         </div>
                     </div>
                 </div>
@@ -140,21 +142,34 @@ export default function ControlHUD({
                                 if (selectedVoice) t.voice = selectedVoice;
                                 window.speechSynthesis.speak(t);
                             }}
-                            className="flex-1 py-2.5 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/60 hover:text-white"
+                            className="flex-1 py-3 sm:py-2.5 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all flex items-center justify-center gap-2 text-[11px] sm:text-[10px] font-bold uppercase tracking-widest text-white/60 hover:text-white"
                         >
                             <Volume2 size={12} /> Test
                         </button>
                         <button
                             onClick={onOpenProfile}
-                            className="flex-1 py-2.5 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/60 hover:text-white"
+                            className="flex-1 py-3 sm:py-2.5 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all flex items-center justify-center gap-2 text-[11px] sm:text-[10px] font-bold uppercase tracking-widest text-white/60 hover:text-white"
                         >
                             <User size={12} /> Profile
                         </button>
                         <button
                             onClick={onOpenTracker}
-                            className="flex-1 py-2.5 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/60 hover:text-indigo-300"
+                            className="flex-1 py-3 sm:py-2.5 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all flex items-center justify-center gap-2 text-[11px] sm:text-[10px] font-bold uppercase tracking-widest text-white/60 hover:text-indigo-300"
                         >
                             <BarChart3 size={12} /> Tracker
+                        </button>
+                    </div>
+
+                    {/* Proactive Trigger Button (Neural Pulse) */}
+                    <div className="mt-4">
+                        <button
+                            onClick={onTriggerProactive}
+                            className="w-full py-2.5 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 hover:bg-indigo-500/10 transition-all flex items-center justify-center gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-400 group overflow-hidden relative"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                            <Activity size={12} className="group-hover:animate-pulse" />
+                            <span>Neural Pulse</span>
+                            <Sparkles size={11} className="opacity-40 group-hover:opacity-100 transition-opacity" />
                         </button>
                     </div>
                 </div>

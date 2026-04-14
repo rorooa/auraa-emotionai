@@ -40,6 +40,21 @@ out/
 .env.development.local
 .env.test.local
 .env.production.local
+.env*.local
+
+# Internal Planning & Antigravity
+implementation_plan.md
+task.md
+walkthrough.md
+output.txt
+.gemini/
+.antigravityignore
+node_modules/
+venv/
+venv_new/
+venv_fixed/
+venv_clean/
+__pycache__/
 
 # IDEs
 .vscode/
@@ -62,6 +77,8 @@ backend/test_output.txt
 # Logs & Temp Output
 *.log
 backend/out.txt
+error.log
+backend/error.log
 
 # Firebase & Venv
 backend/firebase-key.json

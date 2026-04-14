@@ -72,7 +72,7 @@ def normalize_emotion(emotion: str) -> str:
     return mapping.get(emotion.lower(), "neutral")
 
 # ---------------- CONFIDENCE FILTER ----------------
-def confidence_filter(emotion: str, confidence: float, threshold: float = 0.20) -> str:
+def confidence_filter(emotion: str, confidence: float, threshold: float = 0.10) -> str:
     if confidence < threshold:
         return "neutral"
     return emotion
@@ -119,9 +119,9 @@ def detect_emotion_from_image(image_base64: str) -> str:
         # Detect faces
         faces = face_cascade.detectMultiScale(
             gray,
-            scaleFactor=1.1,
-            minNeighbors=5,
-            minSize=(30, 30),
+            scaleFactor=1.05,
+            minNeighbors=3,
+            minSize=(20, 20),
             flags=cv2.CASCADE_SCALE_IMAGE
         )
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Brain, TrendingUp } from "lucide-react";
 
@@ -12,6 +13,7 @@ interface EmotionTrackerProps {
     isOpen: boolean;
     onClose: () => void;
     data: EmotionEntry[];
+    subscriptionTier?: string;
 }
 
 const EMOTION_COLORS: Record<string, string> = {
@@ -34,7 +36,25 @@ const EMOTION_SCORES: Record<string, number> = {
     angry: 1,
 };
 
-export default function EmotionTracker({ isOpen, onClose, data }: EmotionTrackerProps) {
+export default function EmotionTracker({ isOpen, onClose, data, subscriptionTier = "pro" }: EmotionTrackerProps) {
+    const [insights, setInsights] = useState<{insight: string, habit: string} | null>(null);
+    const [loadingInsights, setLoadingInsights] = useState(false);
+
+    useEffect(() => {
+        if (isOpen && subscriptionTier !== 'free' && data.length > 0 && !insights) {
+             setLoadingInsights(true);
+             const token = localStorage.getItem("auraa_token");
+             fetch("/api/history/insights", {
+                 headers: { Authorization: `Bearer ${token}` }
+             })
+             .then(res => res.json())
+             .then(d => {
+                 if (d.insight) setInsights(d);
+             })
+             .finally(() => setLoadingInsights(false));
+        }
+    }, [isOpen, subscriptionTier, data.length, insights]);
+
     if (!isOpen) return null;
 
     // Calculate mood density
@@ -192,6 +212,39 @@ export default function EmotionTracker({ isOpen, onClose, data }: EmotionTracker
                                         );
                                     })}
                                 </div>
+                            </div>
+
+                            {/* AI Insights (PRO) */}
+                            <div className="mt-8">
+                                <span className="text-[9px] uppercase tracking-[0.3em] text-white/40 ml-1 mb-3 block">Neural Insights</span>
+                                {subscriptionTier === 'free' ? (
+                                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center relative overflow-hidden group">
+                                         <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                         <h4 className="text-white font-bold mb-2 flex items-center justify-center gap-2">
+                                             <span className="text-xl">🔒</span> Unlock Pro Insights
+                                         </h4>
+                                         <p className="text-white/50 text-xs mb-4">Get AI-generated psychological summaries and micro-habits based on your emotional data.</p>
+                                         <button onClick={() => window.location.href='/pricing'} className="px-6 py-2 bg-indigo-500 hover:bg-indigo-400 text-white rounded-full text-xs font-bold uppercase tracking-wider transition-colors shadow-lg shadow-indigo-500/20">
+                                              Upgrade to Pro
+                                         </button>
+                                    </div>
+                                ) : loadingInsights ? (
+                                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col gap-3">
+                                         <div className="h-4 bg-white/10 rounded w-3/4 animate-pulse"></div>
+                                         <div className="h-4 bg-white/10 rounded w-1/2 animate-pulse"></div>
+                                    </div>
+                                ) : insights ? (
+                                    <div className="bg-gradient-to-br from-indigo-900/40 to-purple-900/40 border border-indigo-500/30 rounded-2xl p-5 shadow-[0_0_30px_rgba(99,102,241,0.1)]">
+                                         <p className="text-indigo-200 text-sm leading-relaxed mb-4 font-medium">"{insights.insight}"</p>
+                                         <div className="flex items-start gap-3 bg-white/5 rounded-xl p-3 border border-white/5">
+                                             <span className="text-green-400 text-base">🌱</span>
+                                             <div>
+                                                 <div className="text-[10px] uppercase tracking-widest text-white/50 mb-1">Suggested Micro-Habit</div>
+                                                 <div className="text-white/90 text-xs">{insights.habit}</div>
+                                             </div>
+                                         </div>
+                                    </div>
+                                ) : null}
                             </div>
                         </>
                     )}

@@ -1,59 +1,64 @@
-# Emotion Companion - Project Overview
+# AURAA — Startup Project Overview
 
 ## 📖 Introduction
-**Emotion Companion** is an interactive AI application that detects a user's real-time emotions via webcam and responds with an empathetic 3D avatar. The avatar converses with the user using voice interaction and lip-syncing driven by state-of-the-art LLMs.
+**AURAA** is an interactive AI application that detects a user's real-time emotions via webcam and responds with an empathetic 3D avatar. Built for the startup ecosystem, it combines emotional intelligence with cutting-edge web technologies to provide a unique companion experience.
+
+---
 
 ## 🏗 Tech Stack
 
-### Backend (Python)
-- **FastAPI**: Main web server and API handler.
-- **Socket.IO**: Real-time bidirectional communication for video frames and emotion states.
-- **DeepFace (OpenCV/RetinaFace)**: specialized facial attribute analysis for detecting emotions from images.
-- **Groq API (Llama-3)**: Generates conversational, empathetic AI responses.
-- **Pydantic**: Data validation.
+### Frontend (Next.js)
+- **Framework**: Next.js 15+ (App Router, TypeScript)
+- **3D Engine**: Three.js (React Three Fiber)
+- **Styling**: Tailwind CSS & Framer Motion
+- **Sensing**: Web Speech API & Socket.io-client
 
-### Frontend (Web)
-- **HTML5 / CSS3**: Core structure and glassmorphism styling.
-- **JavaScript (Vanilla)**: Main logic for camera handling, events, and API calls.
-- **Three.js**: Renders the 3D animated avatar (`.glb` model).
-- **Socket.IO Client**: Communicates with the backend.
-- **Web Speech API**: Handles Speech-to-Text (STT) and Text-to-Speech (TTS).
+### Backend (FastAPI)
+- **Server**: FastAPI & Uvicorn (Asynchronous Python)
+- **Emotion Sensing**: DeepFace & OpenCV (Facial analysis)
+- **Conversation**: Groq API (Llama-3 models)
+- **Real-time**: Socket.IO
+- **Database**: Firestore (NoSQL) & Firebase Auth
+
+### Business Layer
+- **Payments**: Razorpay (Pro/Premium subscriptions)
+- **Growth**: Built-in Review/Feedback & Testimonial wall
+- **Productivity**: Proactive Trigger System & Neural Insights
+
+---
 
 ## 🧩 Architecture Flow
-1.  **Input**: User's webcam captures video frames.
-2.  **Transmission**: Frames are sent via Socket.IO/REST to the backend.
-3.  **Processing**:
-    -   `emotion.py` detects raw emotions (Happy, Sad, Angry, etc.).
-    -   `emotion_smoothing.py` stabilizes detections to prevent flickering.
-4.  **Interaction**:
-    -   User speaks -> Speech converted to text.
-    -   Text + Emotion sent to `chatbot_llm.py`.
-    -   LLM generates a supportive response.
-5.  **Output**:
-    -   Avatar animates and lip-syncs to the TTS response.
-    -   Avatar changes expression/pose based on the user's emotion.
+1.  **Sight**: Webcam capture -> Socket.IO -> `emotion.py` (DeepFace) -> Real-time mood state.
+2.  **Sound**: User speaks -> `Web Speech API` -> Text -> Backend -> `chatbot_llm.py` (Groq).
+3.  **Synthesis**: LLM generates response -> `personality_engine.py` adds flair -> `AIAvatar` animates/speaks.
+4.  **Growth**: Session ends -> `FeedbackModal` prompts rating -> Testimonial wall updates.
+
+---
 
 ## 📂 Key File Structure
 
 ### Backend (`/backend`)
 | File | Description |
-| :--- | :--- |
-| `main.py` | Entry point. Configures FastAPI, CORS, and Socket.IO server. |
-| `ws.py` | Handles WebSocket events for real-time emotion processing. |
-| `emotion.py` | Core logic using DeepFace to analyze facial expressions. |
-| `emotion_smoothing.py` | Implements a rolling window to stabilize emotion outputs. |
-| `chatbot_llm.py` | Interface for the Groq LLM to generate character responses. |
-| `requirements.txt` | Python dependencies list. |
+|---|---|
+| `main.py` | Entry point & Router registration |
+| `emotion.py` | Facial analysis logic |
+| `chatbot_llm.py` | Groq AI interface |
+| `payments.py` | Razorpay integration |
+| `reviews.py` | Feedback system API |
+| `memory_engine.py` | User relationship tracking |
 
-### Frontend (`/frontend`)
+### Frontend (`/myapp`)
 | File | Description |
-| :--- | :--- |
-| `index.html` | Application UI layout with 3D canvas and controls. |
-| `script.js` | Orchestrates the camera, Three.js scene, lip-sync, and network calls. |
-| `style.css` | visual styling for the application. |
-| `models/` | Directory containing the 3D Avatar assets (`avatar.glb`). |
+|---|---|
+| `app/companion/page.tsx` | Main interactive interface |
+| `app/reviews/page.tsx` | Public testimonials wall |
+| `components/AIAvatar.tsx` | 3D Character logic |
+| `components/FeedbackModal.tsx` | Premium review UI |
+| `next.config.ts` | API rewrites & workspace config |
+
+---
 
 ## 🚀 Setup & Usage
-1.  **Backend**: Install dependencies (`pip install -r requirements.txt`) and run `uvicorn main:app --reload`.
-2.  **Frontend**: Open `index.html` via a local server (e.g., Live Server) or simply open the file (though local server is recommended for camera permissions).
-3.  **Env Vars**: Ensure `GROQ_API_KEY` is set for the backend LLM features.
+1.  **Backend**: `pip install -r requirements.txt` -> `uvicorn main:app --reload`
+2.  **Frontend**: `npm install` -> `npm run dev`
+3.  **Env Vars**: Set `GROQ_API_KEY`, `RAZORPAY_KEY_*`, and Firebase credentials.

@@ -90,7 +90,8 @@ export function useEmotionAI() {
                 
                 const imageData = canvas.toDataURL("image/jpeg", 0.7);
                 if (imageData.length > 100) {
-                    socket.emit("emotion", { image: imageData });
+                    const pMode = localStorage.getItem("auraa_personality") || "friend";
+                    socket.emit("emotion", { image: imageData, personalityMode: pMode });
                 }
             };
 
@@ -135,7 +136,28 @@ export function useEmotionAI() {
     const speak = (text: string) => {
         window.speechSynthesis.cancel();
         const utter = new SpeechSynthesisUtterance(text);
-        if (selectedVoice) utter.voice = selectedVoice;
+        
+        let voiceToUse = selectedVoice;
+        try {
+            const prefLang = localStorage.getItem("auraa_language");
+            if (prefLang && availableVoices.length > 0) {
+                const langMap: Record<string, string> = {
+                    "English": "en", "Spanish": "es", "French": "fr", 
+                    "German": "de", "Japanese": "ja", "Hindi": "hi", "Korean": "ko"
+                };
+                const targetCode = langMap[prefLang];
+                if (targetCode) {
+                    const matchedVoice = availableVoices.find(v => v.lang.toLowerCase().startsWith(targetCode));
+                    if (matchedVoice) {
+                        voiceToUse = matchedVoice;
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Language sync error for TTS:", e);
+        }
+
+        if (voiceToUse) utter.voice = voiceToUse;
         utter.onstart = () => setIsSpeaking(true);
         utter.onend = () => setIsSpeaking(false);
         utter.onerror = () => setIsSpeaking(false);
@@ -152,8 +174,7 @@ export function useEmotionAI() {
             }
 
             setStatus("Thinking...");
-            const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
-            const response = await fetch(`${backendUrl}/chat`, {
+            const response = await fetch(`/api/chat`, {
                 method: "POST",
                 headers: { 
                     "Content-Type": "application/json",
@@ -201,8 +222,7 @@ export function useEmotionAI() {
             const token = localStorage.getItem("auraa_token");
             if (!token) return [];
             
-            const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
-            const response = await fetch(`${backendUrl}/history`, {
+            const response = await fetch(`/api/history`, {
                 headers: { "Authorization": `Bearer ${token}` }
             });
             
@@ -225,10 +245,12 @@ export function useEmotionAI() {
         isConnected,
         videoRef,
         canvasRef,
+        socketRef,
         startSystem,
         chat,
         getHistory,
         greet,
+        speak,
         proactiveEmotion,
         clearProactiveTrigger,
         setEmotion: (emo: string) => { setEmotion(emo); setHeartbeat(prev => prev + 1); },

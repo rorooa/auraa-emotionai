@@ -14,6 +14,10 @@ if not firebase_config_env:
 else:
     print("DEBUG: FIREBASE_SERVICE_ACCOUNT found in environment!")
 
+# Local development: use the JSON file
+_base_dir = os.path.dirname(os.path.abspath(__file__))
+_key_path = os.path.join(_base_dir, "firebase-key.json")
+
 if firebase_config_env:
     try:
         # Parse the JSON string from environment variable
@@ -22,25 +26,30 @@ if firebase_config_env:
     except Exception as e:
         print(f"[ERROR] Failed to parse FIREBASE_SERVICE_ACCOUNT env var: {e}")
         # Fallback to file if it exists
-        cred = credentials.Certificate("firebase-key.json")
+        cred = credentials.Certificate(_key_path)
 else:
     # Local development: use the JSON file
-    if os.path.exists("firebase-key.json"):
-        cred = credentials.Certificate("firebase-key.json")
+    if os.path.exists(_key_path):
+        cred = credentials.Certificate(_key_path)
     else:
-        raise FileNotFoundError("firebase-key.json not found and FIREBASE_SERVICE_ACCOUNT env var not set.")
+        # Check current working directory as a secondary fallback
+        if os.path.exists("firebase-key.json"):
+            cred = credentials.Certificate("firebase-key.json")
+        else:
+            raise FileNotFoundError(f"firebase-key.json not found at {_key_path} or in CWD, and FIREBASE_SERVICE_ACCOUNT env var not set.")
 
 firebase_admin.initialize_app(cred)
 db_firestore = firestore.client()
 
 # Helper classes for Firestore documents
 class User:
-    def __init__(self, id, username, email, hashed_password, language_preference="English"):
+    def __init__(self, id, username, email, hashed_password, language_preference="English", subscription_tier="free"):
         self.id = id
         self.username = username
         self.email = email
         self.hashed_password = hashed_password
         self.language_preference = language_preference
+        self.subscription_tier = subscription_tier
 
 class ChatHistory:
     def __init__(self, user_id, role, encrypted_content, detected_emotion, created_at):
