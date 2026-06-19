@@ -18,6 +18,8 @@ const nextConfig: NextConfig = {
       { source: '/api/profile/:path*', destination: `${BACKEND}/profile/:path*` },
       { source: '/api/emotion-mirror/:path*', destination: `${BACKEND}/emotion-mirror/:path*` },
       { source: '/api/rooms/:path*', destination: `${BACKEND}/rooms/:path*` },
+      { source: '/api/user/streak/check', destination: `${BACKEND}/api/user/streak/check` },
+      { source: '/api/games/log', destination: `${BACKEND}/api/games/log` },
       { source: '/api/health', destination: `${BACKEND}/` },
     ];
   },

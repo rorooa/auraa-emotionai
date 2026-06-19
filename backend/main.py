@@ -56,6 +56,21 @@ fastapi_app.include_router(auth.router)
 fastapi_app.include_router(reviews.router)
 fastapi_app.include_router(payments.router)
 
+# ---------------- ROOM REST API ----------------
+
+class RoomCreateRequest(BaseModel):
+    room_type: str
+    creator_name: str
+
+@fastapi_app.get("/rooms")
+def list_rooms():
+    return {"rooms": room_manager.list_public_rooms()}
+
+@fastapi_app.post("/rooms/create")
+def create_room(req: RoomCreateRequest):
+    room = room_manager.create_room(req.room_type, req.creator_name)
+    return {"room_id": room.room_id, "room_type": room.room_type}
+
 # ---------------- GAMIFICATION (STREAKS & GAMES) ----------------
 
 class GameLog(BaseModel):
