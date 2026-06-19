@@ -50,6 +50,81 @@ fastapi_app.include_router(auth.router)
 fastapi_app.include_router(reviews.router)
 fastapi_app.include_router(payments.router)
 
+# ---------------- GAMIFICATION (STREAKS & GAMES) ----------------
+
+class GameLog(BaseModel):
+    game_mode: str
+    agility_score: str | None = None
+    emotions_hit: str | None = None
+    verdict: str | None = None
+
+@fastapi_app.post("/api/user/streak/check")
+def check_and_update_streak(token: str = Depends(oauth2_scheme), db=Depends(get_db)):
+    user = get_current_user(token, db)
+    now = datetime.datetime.utcnow()
+    today = now.date()
+    
+    # Defaults if missing
+    last_date_str = getattr(user, 'last_interaction_date', None)
+    current_streak = getattr(user, 'current_streak', 0)
+    max_streak = getattr(user, 'max_streak', 0)
+    
+    if last_date_str:
+        try:
+            last_date = datetime.datetime.fromisoformat(last_date_str).date()
+            delta_days = (today - last_date).days
+            
+            if delta_days == 1:
+                # Logged in consecutive day
+                current_streak += 1
+            elif delta_days > 1:
+                # Streak broken
+                current_streak = 1
+        except Exception:
+            current_streak = 1
+    else:
+        # First interaction
+        current_streak = 1
+
+    if current_streak > max_streak:
+        max_streak = current_streak
+
+    # Update Firestore
+    db.collection("users").document(user.id).update({
+        "current_streak": current_streak,
+        "max_streak": max_streak,
+        "last_interaction_date": now.isoformat()
+    })
+    
+    return {
+        "current_streak": current_streak,
+        "max_streak": max_streak,
+        "message": "Streak checked and updated."
+    }
+
+@fastapi_app.post("/api/games/log")
+def log_game_history(log: GameLog, token: str = Depends(oauth2_scheme), db=Depends(get_db)):
+    user = get_current_user(token, db)
+    
+    game_data = {
+        "user_id": user.id,
+        "username": user.username,
+        "game_mode": log.game_mode,
+        "agility_score": log.agility_score,
+        "emotions_hit": log.emotions_hit,
+        "verdict": log.verdict,
+        "played_at": datetime.datetime.utcnow().isoformat()
+    }
+    
+    db.collection("game_history").add(game_data)
+    
+    # Increment total games played in user doc
+    total_games = getattr(user, 'total_games_played', 0) + 1
+    db.collection("users").document(user.id).update({"total_games_played": total_games})
+    
+    return {"status": "success", "message": "Game logged successfully"}
+
+
 # REST CORS (for /chat, /emotion)
 fastapi_app.add_middleware(
     CORSMiddleware,

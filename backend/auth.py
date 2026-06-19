@@ -73,7 +73,11 @@ def firebase_login(payload: FirebaseLogin, db=Depends(get_db)):
                 "email": email,
                 "firebase_uid": uid,
                 "language_preference": "English",
-                "created_at": datetime.utcnow()
+                "created_at": datetime.utcnow(),
+                "current_streak": 0,
+                "max_streak": 0,
+                "last_interaction_date": None,
+                "total_games_played": 0
             }
             db.collection("users").document(uid).set(user_data)
             username = name
@@ -108,7 +112,11 @@ def register(user: UserCreate, db=Depends(get_db)):
         "email": user.email,
         "hashed_password": hashed_pwd,
         "language_preference": "English",
-        "created_at": datetime.utcnow()
+        "created_at": datetime.utcnow(),
+        "current_streak": 0,
+        "max_streak": 0,
+        "last_interaction_date": None,
+        "total_games_played": 0
     }
     
     new_user_ref = db.collection("users").add(user_data)
@@ -169,6 +177,10 @@ def get_current_user(token: str, db=Depends(get_db)):
         subscription_tier=user_dict.get("subscription_tier", "pro"),  # DEFAULT TO PRO FOR LOCALHOST
         personality_mode=user_dict.get("personality_mode", "friend"),
         relationship_memory=user_dict.get("relationship_memory", ""),
-        custom_avatar_url=user_dict.get("custom_avatar_url", None)
+        custom_avatar_url=user_dict.get("custom_avatar_url", None),
+        current_streak=user_dict.get("current_streak", 0),
+        max_streak=user_dict.get("max_streak", 0),
+        last_interaction_date=user_dict.get("last_interaction_date", None),
+        total_games_played=user_dict.get("total_games_played", 0)
     )
     return user_obj

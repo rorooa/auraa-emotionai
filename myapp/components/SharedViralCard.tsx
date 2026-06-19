@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { toPng } from "html-to-image";
 import { Download, RefreshCw, Zap } from "lucide-react";
@@ -25,6 +25,37 @@ export default function SharedViralCard({ data, onClose }: SharedViralCardProps)
   const [theme, setTheme] = useState<CardTheme>("cyberpunk");
   const [isExporting, setIsExporting] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const hasLogged = useRef(false);
+
+  useEffect(() => {
+    if (hasLogged.current) return;
+    hasLogged.current = true;
+
+    const token = localStorage.getItem("auraa_token");
+    if (!token) return;
+
+    const logGame = async () => {
+      try {
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+        await fetch(`${backendUrl}/api/games/log`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            game_mode: data.mode,
+            agility_score: data.stats[0]?.value?.toString(),
+            emotions_hit: data.stats[1]?.value?.toString(),
+            verdict: data.verdict
+          })
+        });
+      } catch (err) {
+        console.error("Failed to log game", err);
+      }
+    };
+    logGame();
+  }, [data]);
 
   const handleExport = async () => {
     if (!cardRef.current) return;

@@ -43,13 +43,17 @@ db_firestore = firestore.client()
 
 # Helper classes for Firestore documents
 class User:
-    def __init__(self, id, username, email, hashed_password, language_preference="English", subscription_tier="free"):
+    def __init__(self, id, username, email, hashed_password, language_preference="English", subscription_tier="free", current_streak=0, max_streak=0, last_interaction_date=None, total_games_played=0):
         self.id = id
         self.username = username
         self.email = email
         self.hashed_password = hashed_password
         self.language_preference = language_preference
         self.subscription_tier = subscription_tier
+        self.current_streak = current_streak
+        self.max_streak = max_streak
+        self.last_interaction_date = last_interaction_date
+        self.total_games_played = total_games_played
 
 class ChatHistory:
     def __init__(self, user_id, role, encrypted_content, detected_emotion, created_at):

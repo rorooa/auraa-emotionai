@@ -1,6 +1,6 @@
 "use client";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import MagneticButton from "./MagneticButton";
 import { useRouter } from "next/navigation";
 
@@ -45,6 +45,31 @@ export default function HeroSection() {
     const y = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
     const opacity = useTransform(scrollYProgress, [0, 1], [1, 0]);
     const router = useRouter();
+    const [streak, setStreak] = useState(0);
+
+    useEffect(() => {
+        const token = localStorage.getItem("auraa_token");
+        if (!token) return;
+
+        const checkStreak = async () => {
+            try {
+                const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+                const res = await fetch(`${backendUrl}/api/user/streak/check`, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setStreak(data.current_streak);
+                }
+            } catch (err) {
+                console.error("Failed to check streak", err);
+            }
+        };
+        checkStreak();
+    }, []);
 
     const titleVariants: any = {
         hidden: { opacity: 0, y: 40 },
@@ -88,16 +113,27 @@ export default function HeroSection() {
                     </motion.h1>
                 </div>
                 
-                {/* REVIEWS BADGE */}
+                {/* REVIEWS BADGE & STREAK */}
                 <motion.div
                     custom={0.5} initial="hidden" animate="visible" variants={titleVariants}
-                    className="mb-6 xl:mb-10 cursor-pointer z-20"
-                    onClick={() => router.push("/reviews")}
+                    className="mb-6 xl:mb-10 flex flex-wrap items-center justify-center gap-3 z-20"
                 >
-                    <div className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all backdrop-blur-md shadow-lg hover:shadow-indigo-500/20">
+                    <div 
+                        className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all backdrop-blur-md shadow-lg hover:shadow-indigo-500/20 cursor-pointer"
+                        onClick={() => router.push("/reviews")}
+                    >
                         <span className="text-yellow-400 text-xs sm:text-sm">★★★★★</span>
                         <span className="text-white/80 text-[10px] sm:text-xs xl:text-sm font-medium tracking-wide">4.8 from 200+ users</span>
                     </div>
+
+                    {streak > 0 && (
+                        <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/30 backdrop-blur-md shadow-[0_0_15px_rgba(249,115,22,0.2)]">
+                            <span className="text-orange-400 animate-pulse">🔥</span>
+                            <span className="text-orange-100 text-[10px] sm:text-xs xl:text-sm font-bold tracking-widest uppercase">
+                                {streak} Day Streak
+                            </span>
+                        </div>
+                    )}
                 </motion.div>
                 
                 <div className="overflow-hidden mb-8 md:mb-12">
