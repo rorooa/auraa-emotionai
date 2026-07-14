@@ -15,9 +15,6 @@ import { useProactiveCompanion } from "@/hooks/useProactiveCompanion";
 import UserDashboard from "@/components/UserDashboard";
 import { motion } from "framer-motion";
 import FeedbackModal from "@/components/FeedbackModal";
-import AuraCardModal from "@/components/AuraCardModal";
-import AvaturnCreator from "@/components/AvaturnCreator";
-import ExportClipModal from "@/components/ExportClipModal";
 const FaceScanner = dynamic(() => import("@/components/FaceScanner"), { ssr: false });
 
 export default function CompanionPage() {
@@ -64,9 +61,6 @@ export default function CompanionPage() {
     });
     
     const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
-    const [isAuraCardOpen, setIsAuraCardOpen] = useState(false);
-    const [isAvaturnOpen, setIsAvaturnOpen] = useState(false);
-    const [isExportOpen, setIsExportOpen] = useState(false);
     const [subscriptionTier, setSubscriptionTier] = useState("pro"); // DEFAULT TO PRO FOR LOCALHOST
     const [isMobile, setIsMobile] = useState(false);
     const [mobileMode, setMobileMode] = useState<'avatar_only' | 'chat_only' | 'unselected'>('unselected');
@@ -154,15 +148,6 @@ export default function CompanionPage() {
     }, [trackerData, handleLoadHistory]);
 
     const handleAvatarSelect = (id: string) => {
-        if (id === "custom") {
-            if (userInfo.custom_avatar_url) {
-                trackEvent("Avatar Selected", { avatarId: "custom", tier: subscriptionTier });
-                setSelectedAvatar("custom");
-            } else {
-                setIsAvaturnOpen(true);
-            }
-            return;
-        }
         trackEvent("Avatar Selected", { avatarId: id, tier: subscriptionTier });
         setSelectedAvatar(id);
     };
@@ -321,39 +306,11 @@ export default function CompanionPage() {
                         <p className="text-white/30 text-xs">High-Fidelity 3D<br/>Lip Sync · Emotion Mapping</p>
                         <div className="mt-4 text-[9px] tracking-widest uppercase text-emerald-400/60 border border-emerald-500/10 rounded-full px-3 py-1 inline-block">Neural Core</div>
                     </motion.div>
-
-                    {/* Custom Core Card */}
-                    <motion.div
-                        whileHover={{ scale: 1.05, translateY: -10 }}
-                        animate={{ 
-                            rotateX: -mousePosition.y * 0.05,
-                            rotateY: mousePosition.x * 0.05,
-                        }}
-                        onClick={() => handleAvatarSelect("custom")}
-                        className="flex-1 group cursor-pointer bg-slate-900/40 backdrop-blur-[40px] border border-white/10 p-8 rounded-[2.5rem] hover:border-fuchsia-500/60 hover:bg-fuchsia-500/5 transition-all duration-500 text-center max-w-[280px] relative overflow-hidden"
-                    >
-                        <div className="w-full h-40 mb-6 bg-gradient-to-b from-fuchsia-500/20 to-transparent rounded-2xl overflow-hidden flex items-center justify-center font-mono text-6xl">
-                             👤
-                        </div>
-                        <h2 className="text-xl font-bold mb-2 group-hover:text-fuchsia-400 transition-colors uppercase tracking-widest">Custom Core</h2>
-                        <p className="text-white/30 text-xs">Personalized 3D<br/>Avaturn Integration</p>
-                        <div className="mt-4 text-[9px] tracking-widest uppercase text-fuchsia-400/60 border border-fuchsia-500/10 rounded-full px-3 py-1 inline-block">Pro Core</div>
-                    </motion.div>
                 </div>
 
                 <div className="mt-12 text-white/20 text-[10px] tracking-[0.5em] uppercase z-10">
                     Neural Link Established v5.0
                 </div>
-
-                <AvaturnCreator 
-                    isOpen={isAvaturnOpen} 
-                    onClose={() => setIsAvaturnOpen(false)} 
-                    onUrlReceived={(url) => {
-                        setUserInfo(prev => ({ ...prev, custom_avatar_url: url }));
-                        trackEvent("Avatar Selected", { avatarId: "custom", source: "avaturn" });
-                        setSelectedAvatar("custom");
-                    }} 
-                />
             </main>
         );
     }
@@ -598,31 +555,6 @@ export default function CompanionPage() {
             {/* Floating Action Buttons */}
             <div className="fixed bottom-24 right-6 z-50 pointer-events-auto flex flex-col items-end gap-3">
                 <button 
-                    onClick={() => {
-                        trackEvent("Opened Export Clip Modal");
-                        setIsExportOpen(true);
-                    }}
-                    className="group flex flex-row items-center gap-2 px-4 py-3 bg-[#0a0a0f]/80 backdrop-blur-md border border-white/10 hover:border-red-500/50 rounded-full shadow-xl transition-all hover:scale-105"
-                >
-                    <span className="text-[10px] font-bold tracking-widest uppercase text-white/70 group-hover:text-white max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 ease-in-out whitespace-nowrap hidden sm:inline-block">
-                        Export Clip
-                    </span>
-                    <span className="text-red-400 text-lg group-hover:rotate-12 transition-transform">🎬</span>
-                </button>
-                <button 
-                    onClick={() => {
-                        trackEvent("Opened Aura Card Modal");
-                        setIsAuraCardOpen(true);
-                    }}
-                    className="group flex flex-row items-center gap-2 px-4 py-3 bg-[#0a0a0f]/80 backdrop-blur-md border border-white/10 hover:border-pink-500/50 rounded-full shadow-xl transition-all hover:scale-105"
-                >
-                    <span className="text-[10px] font-bold tracking-widest uppercase text-white/70 group-hover:text-white max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 ease-in-out whitespace-nowrap hidden sm:inline-block">
-                        Aura Card
-                    </span>
-                    <span className="text-pink-400 text-lg group-hover:rotate-12 transition-transform">🎴</span>
-                </button>
-
-                <button 
                     onClick={() => setIsFeedbackOpen(true)}
                     className="group flex flex-row items-center gap-2 px-4 py-3 bg-[#0a0a0f]/80 backdrop-blur-md border border-white/10 hover:border-indigo-500/50 rounded-full shadow-xl transition-all hover:scale-105"
                 >
@@ -636,27 +568,6 @@ export default function CompanionPage() {
                 isOpen={isFeedbackOpen} 
                 onClose={() => setIsFeedbackOpen(false)} 
                 sessionEmotion={emotion || "Neutral"}
-            />
-            
-            <AvaturnCreator 
-                isOpen={isAvaturnOpen} 
-                onClose={() => setIsAvaturnOpen(false)} 
-                onUrlReceived={(url) => {
-                    setUserInfo(prev => ({ ...prev, custom_avatar_url: url }));
-                    trackEvent("Avatar Selected", { avatarId: "custom", source: "avaturn" });
-                    setSelectedAvatar("custom");
-                }} 
-            />
-            <ExportClipModal 
-                isOpen={isExportOpen} 
-                onClose={() => setIsExportOpen(false)} 
-                subscriptionTier={subscriptionTier}
-            />
-            <AuraCardModal
-                isOpen={isAuraCardOpen}
-                onClose={() => setIsAuraCardOpen(false)}
-                dominantEmotion={emotion || "Neutral"}
-                userName={userInfo.name}
             />
 
             {/* Floating Glow Effects */}

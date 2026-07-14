@@ -45,31 +45,6 @@ export default function HeroSection() {
     const y = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
     const opacity = useTransform(scrollYProgress, [0, 1], [1, 0]);
     const router = useRouter();
-    const [streak, setStreak] = useState(0);
-
-    useEffect(() => {
-        const token = localStorage.getItem("auraa_token");
-        if (!token) return;
-
-        const checkStreak = async () => {
-            try {
-                const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
-                const res = await fetch(`${backendUrl}/api/user/streak/check`, {
-                    method: "POST",
-                    headers: {
-                        "Authorization": `Bearer ${token}`
-                    }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    setStreak(data.current_streak);
-                }
-            } catch (err) {
-                console.error("Failed to check streak", err);
-            }
-        };
-        checkStreak();
-    }, []);
 
     const titleVariants: any = {
         hidden: { opacity: 0, y: 40 },
@@ -113,7 +88,7 @@ export default function HeroSection() {
                     </motion.h1>
                 </div>
                 
-                {/* REVIEWS BADGE & STREAK */}
+                {/* REVIEWS BADGE */}
                 <motion.div
                     custom={0.5} initial="hidden" animate="visible" variants={titleVariants}
                     className="mb-6 xl:mb-10 flex flex-wrap items-center justify-center gap-3 z-20"
@@ -125,15 +100,6 @@ export default function HeroSection() {
                         <span className="text-yellow-400 text-xs sm:text-sm">★★★★★</span>
                         <span className="text-white/80 text-[10px] sm:text-xs xl:text-sm font-medium tracking-wide">4.8 from 200+ users</span>
                     </div>
-
-                    {streak > 0 && (
-                        <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/30 backdrop-blur-md shadow-[0_0_15px_rgba(249,115,22,0.2)]">
-                            <span className="text-orange-400 animate-pulse">🔥</span>
-                            <span className="text-orange-100 text-[10px] sm:text-xs xl:text-sm font-bold tracking-widest uppercase">
-                                {streak} Day Streak
-                            </span>
-                        </div>
-                    )}
                 </motion.div>
                 
                 <div className="overflow-hidden mb-8 md:mb-12">
@@ -154,72 +120,16 @@ export default function HeroSection() {
                     <FeatureTag>Aura</FeatureTag>
                 </motion.div>
 
-                <motion.div custom={3} initial="hidden" animate="visible" variants={titleVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 w-full max-w-3xl px-4">
+                <motion.div custom={3} initial="hidden" animate="visible" variants={titleVariants} className="flex justify-center w-full max-w-md px-4">
                     <MagneticButton 
                         onClick={() => router.push("/companion")}
-                        className="group flex items-center justify-center gap-3 px-6 py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/30 rounded-full backdrop-blur-xl transition-all shadow-[0_0_30px_rgba(255,255,255,0.05)] hover:shadow-[0_0_40px_rgba(255,255,255,0.1)]"
+                        className="group flex items-center justify-center gap-3 px-8 py-5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 hover:border-indigo-400/50 rounded-full backdrop-blur-xl transition-all shadow-[0_0_30px_rgba(99,102,241,0.2)] hover:shadow-[0_0_40px_rgba(99,102,241,0.4)]"
                     >
-                        <span className="text-xs font-bold tracking-[0.15em] uppercase text-white/90">Talk with AURAA</span>
+                        <span className="text-sm font-bold tracking-[0.2em] uppercase text-white/90">Talk with AURAA</span>
                         <motion.span 
                             animate={{ x: [0, 5, 0] }} 
                             transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
                             className="text-white/50 group-hover:text-white transition-colors"
-                        >
-                            →
-                        </motion.span>
-                    </MagneticButton>
-
-                    <MagneticButton 
-                        onClick={() => router.push("/rooms")}
-                        className="group flex items-center justify-center gap-3 px-6 py-4 bg-purple-500/5 hover:bg-purple-500/10 border border-purple-500/20 hover:border-purple-500/40 rounded-full backdrop-blur-xl transition-all"
-                    >
-                        <span className="text-xs font-bold tracking-[0.15em] uppercase text-purple-300/90">Aura Rooms</span>
-                        <motion.span 
-                            animate={{ x: [0, 5, 0] }} 
-                            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut", delay: 0.5 }}
-                            className="text-purple-400/50 group-hover:text-purple-300 transition-colors"
-                        >
-                            →
-                        </motion.span>
-                    </MagneticButton>
-
-                    <MagneticButton 
-                        onClick={() => router.push("/emotion-mirror")}
-                        className="group flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-pink-500/10 to-orange-500/10 hover:from-pink-500/20 hover:to-orange-500/20 border border-pink-500/20 hover:border-pink-400/50 rounded-full backdrop-blur-xl transition-all"
-                    >
-                        <span className="text-xs font-bold tracking-[0.15em] uppercase text-transparent bg-clip-text bg-gradient-to-r from-pink-300 to-orange-300">Emotion Mirror 🧠</span>
-                        <motion.span 
-                            animate={{ x: [0, 5, 0] }} 
-                            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut", delay: 1 }}
-                            className="text-pink-400/50 group-hover:text-pink-300 transition-colors"
-                        >
-                            →
-                        </motion.span>
-                    </MagneticButton>
-
-                    <MagneticButton 
-                        onClick={() => router.push("/confessions")}
-                        className="group flex items-center justify-center gap-3 px-6 py-4 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/50 rounded-full backdrop-blur-xl transition-all"
-                    >
-                        <span className="text-xs font-bold tracking-[0.15em] uppercase text-red-400">Confessions 🕵️</span>
-                        <motion.span 
-                            animate={{ x: [0, 5, 0] }} 
-                            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut", delay: 1.5 }}
-                            className="text-red-400/50 group-hover:text-red-300 transition-colors"
-                        >
-                            →
-                        </motion.span>
-                    </MagneticButton>
-
-                    <MagneticButton 
-                        onClick={() => router.push("/shapeshifter")}
-                        className="group flex items-center justify-center gap-3 px-6 py-4 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 hover:border-cyan-500/50 rounded-full backdrop-blur-xl transition-all"
-                    >
-                        <span className="text-xs font-bold tracking-[0.15em] uppercase text-cyan-400">Shapeshifter ⚡</span>
-                        <motion.span 
-                            animate={{ x: [0, 5, 0] }} 
-                            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut", delay: 2 }}
-                            className="text-cyan-400/50 group-hover:text-cyan-300 transition-colors"
                         >
                             →
                         </motion.span>
